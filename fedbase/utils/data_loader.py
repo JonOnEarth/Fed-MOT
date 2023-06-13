@@ -16,7 +16,7 @@ import math
 import pandas as pd
 from pathlib import Path
 from collections import Counter
-import medmnist
+# import medmnist
 
 class data_process:
     def __init__(self, dataset_name):
