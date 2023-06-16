@@ -19,6 +19,9 @@ class server_class():
             self.model = model
         self.model.to(self.device)
 
+    def assign_model_lambda(self, model_lambda):
+        self.model_lambda = model_lambda
+
     def aggregate(self, model_list, weight_list):
         aggregated_weights = model_list[0].state_dict()
         for j in aggregated_weights.keys():
@@ -90,4 +93,16 @@ class server_class():
         print('Accuracy on the %d test cases: %.2f %%' % (total, 100*correct / total))
 
     def weighted_clustering_GNN(self, nodes, idlist, num_clusters):
-        
+        pass
+
+    def clustering_plot(self):
+        # print(self.clustering)
+        # self.clustering =[[1,1,2,2,3,3],[1,1,1,2,2,2],[1, 1, 1, 2, 2, 2],[1, 1, 1, 2, 2, 2]]
+        col = [str(i) for i in range(len(self.clustering))]+['id']
+        self.clustering.append(list(range(len(self.clustering[0]))))
+        data= pd.DataFrame(np.array(self.clustering).T,columns= col)
+        for i in data.columns:
+            data[i]=data[i].apply(lambda x: str(x))
+        # Make the plot
+        parallel_coordinates(data, 'id', colormap=plt.get_cmap("Set2"))
+        plt.show()
