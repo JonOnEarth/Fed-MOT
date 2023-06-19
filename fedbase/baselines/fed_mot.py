@@ -10,9 +10,10 @@ import os
 import sys
 import inspect
 from functools import partial
+import copy
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
-    reduction = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None, temperature=1.0):
+    reduction = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None, temperature=torch.tensor(1.0)):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -20,9 +21,9 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     server.assign_model(model())
     # define the parameter lambda
     model_lambda = dict()
-    for name, param in model.named_parameters():
-        model_lambda[name] = torch.ones_like(param.data).to(device)
-    server.assign_lambda(model_lambda)
+    for name, param in server.model.named_parameters():
+        model_lambda[name] = torch.zeros_like(param)
+    server.assign_model_lambda(model_lambda)
 
     nodes = [node(i, device) for i in range(num_nodes)]
     # local_models = [model() for i in range(num_nodes)]
@@ -35,6 +36,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         nodes[i].assign_test(DataLoader(test_splited[i], batch_size=batch_size, shuffle=False))
         # model
         nodes[i].assign_model(model())
+        nodes[i].assign_model_lambda(model_lambda)
         # objective
         nodes[i].assign_objective(objective())
         # optim
@@ -49,18 +51,22 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
 
     # initialize K cluster model
     cluster_models = [model() for i in range(K)]
+    cluster_models_lambda = [model_lambda for i in range(K)]
 
+    
     # train!
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))
         
-        # local update
+        # local update for weight and JPDA training
         nodes_k_m = [[] for j in range(num_nodes)]
-        nodes_k_m_weight = [[] for j in range(num_nodes)]
+        nodes_k_m_weight = [[1] for j in range(num_nodes)]
         for j in range(num_nodes):
             nodes_k = [[] for i in range(K)]
             nodes_k_weight = [[] for i in range(K)]
             for i in range(K):
+                nodes[j].assign_model(cluster_models[i])
+                nodes[j].assign_model_lambda(cluster_models_lambda[i])
                 nodes[j].get_ce_loss(temperature)
                 if reduction == 'JPDA':
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
@@ -73,20 +79,68 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         # server aggregation and distribution by cluster
         if reduction == 'JPDA':
             for j in range(K):
-                model_k, model_k_lambda = server.aggregate_bayes([nodes_k_m[i][j][0].model for i in range(num_nodes)],\
-                                                  [nodes_k_m_weight[i][j][0] for i in range(num_nodes)],aggregated_method='AA')
+                model_k, model_k_lambda = server.aggregate_bayes([nodes_k_m[i][j].model for i in range(num_nodes)],\
+                    [nodes_k_m[i][j].model_lambda for i in range(num_nodes)],\
+                          [nodes_k_m_weight[i][j] for i in range(num_nodes)],aggregated_method='AA')
+                cluster_models[j].load_state_dict(model_k)
+                cluster_models_lambda[j] = model_k_lambda
+            
+            # test
+            for j in range(num_nodes):
+                accs = []
+                weights = []
+                for i in range(K):
+                    nodes[j].assign_model(cluster_models[i])
+                    nodes[j].assign_model_lambda(cluster_models_lambda[i])
+                    nodes[j].get_ce_loss(temperature)
+                    nodes[j].test()
+                    accs.append(nodes[j].test_acc)
+                    weights.append(nodes[j].weight)
+                accs_node = sum(torch.tensor(accs)*torch.tensor(weights)/sum(weights))
+                print('Node %d test acc: %f' % (j, accs_node))
 
-        # server clustering
-        # server.weighted_clustering(nodes, list(range(num_nodes)), K)
-        # server aggregation and distribution by cluster
-        for j in range(K):
-            assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==j]
-            weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
-            model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
-            server.distribute([nodes[i].model for i in assign_ls], model_k)
-            cluster_models[j].load_state_dict(model_k)
 
-        # test accuracy
+        elif reduction == 'GNN':
+            # get the biggest value of nodes_k_m_weight of each node and its index
+            nodes_k_m_weight_max = [max(nodes_k_m_weight[j]) for j in range(num_nodes)]
+            nodes_k_m_weight_max_index = [nodes_k_m_weight[j].index(max(nodes_k_m_weight[j])) for j in range(num_nodes)]
+
+            # train
+            for j in range(num_nodes):
+                nodes[j].assign_model(nodes_k_m[j][nodes_k_m_weight_max_index[j]].model)
+                nodes[j].assign_model_lambda(nodes_k_m[j][nodes_k_m_weight_max_index[j]].model_lambda)
+                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
+            # aggregate
+            for i in range(K):
+                assign_ls = [j for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
+                weight_ls = [nodes_k_m_weight_max[j] for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
+                model_k, model_k_lambda = server.aggregate_bayes([nodes[j].model for j in assign_ls], [nodes[j].model_lambda for j in assign_ls], weight_ls, aggregated_method='GA')
+                server.distribute([nodes[j].model for j in assign_ls], model_k)
+                server.distribute_lambda([nodes[j].model_lambda for j in assign_ls], model_k_lambda)
+                cluster_models[i].load_state_dict(model_k)
+                cluster_models_lambda[i] = model_k_lambda
+            # test accuracy
+            for j in range(num_nodes):
+                nodes[j].local_test()
+            server.acc(nodes, weight_list)
+
+    if not finetune:
+        assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
+        # log
+        log(os.path.basename(__file__)[:-3] + add_(K)  + add_(split_para), nodes, server)
+        return cluster_models, assign
+    else:
+        if not finetune_steps:
+            finetune_steps = local_steps
+        # fine tune
         for j in range(num_nodes):
+            # if not reg_lam:
+            #     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
+            # else:
+            #     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_fedprox, reg_model = cluster_models[nodes[j].label], reg_lam= reg_lam))
+            nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
             nodes[j].local_test()
         server.acc(nodes, weight_list)
+        # log
+        log(os.path.basename(__file__)[:-3] + add_('finetune') + add_(K)  + add_(split_para), nodes, server)
+        return [nodes[i].model for i in range(num_nodes)]

@@ -66,6 +66,12 @@ class server_class():
         for i in model_in_list:
             i.load_state_dict(model_dis_dict)
 
+    def distribute_lambda(self, model_lambda_in_list, model_lambda_dis_dict = None):
+        if not model_lambda_dis_dict:
+            model_lambda_dis_dict = self.model_lambda
+        for i in model_lambda_in_list:
+            i = model_lambda_dis_dict
+
     def acc(self, nodes, weight_list):
         global_test_metrics = [0]*2
         for i in range(len(weight_list)):

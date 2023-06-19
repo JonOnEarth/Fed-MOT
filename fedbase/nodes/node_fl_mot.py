@@ -118,6 +118,85 @@ class node():
         ce_losss = ce_losss/len(self.train)
         self.weight = torch.exp(-ce_losss*temperature)
 
+    def local_train_acc(self, model):
+        model.to(self.device)
+        predict_ts = torch.empty(0).to(self.device)
+        label_ts = torch.empty(0).to(self.device)
+        i = 0
+        with torch.no_grad():
+            for data in self.train:
+                inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = torch.flatten(labels)
+                labels = labels.to(self.device, dtype = torch.long)
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                predict_ts = torch.cat([predict_ts, predicted], 0)
+                label_ts = torch.cat([label_ts, labels], 0)
+                i+=1
+                if i>=10:
+                    break
+        acc = accuracy_score(label_ts.cpu(), predict_ts.cpu())
+        return acc
+
+    def local_test(self, model_res = None):
+        predict_ts = torch.empty(0).to(self.device)
+        label_ts = torch.empty(0).to(self.device)
+        with torch.no_grad():
+            for data in self.test:
+                inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = torch.flatten(labels)
+                labels = labels.to(self.device, dtype = torch.long)
+                if model_res:
+                    model_res.to(self.device)
+                    outputs = model_res(inputs) + self.model(inputs)
+                else:
+                    outputs = self.model(inputs) 
+                # print(outputs.data.dtype)
+                _, predicted = torch.max(outputs.data, 1)
+                predict_ts = torch.cat([predict_ts, predicted], 0)
+                label_ts = torch.cat([label_ts, labels], 0)
+        acc = accuracy_score(label_ts.cpu(), predict_ts.cpu())
+        macro_f1 = f1_score(label_ts.cpu(), predict_ts.cpu(), average='macro')
+        # micro_f1 = f1_score(label_ts.cpu(), predict_ts.cpu(), average='micro')
+        # print('Accuracy, Macro F1, Micro F1 of Device %d on the %d test cases: %.2f %%, %.2f, %.2f' % (self.id, len(label_ts), acc*100, macro_f1, micro_f1))
+        print('Accuracy, Macro F1 of Device %d on the %d test cases: %.2f %%, %.2f %%' % (self.id, len(label_ts), acc*100, macro_f1*100))
+        self.test_metrics.append([acc, macro_f1])
+
+
+    def local_ensemble_test(self, model_list, voting = 'soft'):
+        predict_ts = torch.empty(0).to(self.device)
+        label_ts = torch.empty(0).to(self.device)
+        with torch.no_grad():
+            for data in self.test:
+                inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = torch.flatten(labels)
+                labels = labels.to(self.device, dtype = torch.long)
+                out_hard = []
+                if voting == 'soft':
+                    out = torch.zeros(self.model(inputs).data.shape).to(self.device)
+                    for model in model_list:
+                        outputs = model(inputs)
+                        out = out + outputs.data/len(model_list)
+                        _, predicted = torch.max(out, 1)
+                elif voting == 'hard':
+                    out_hard = []
+                    for model in model_list:
+                        outputs = model(inputs)
+                        _, predicted = torch.max(outputs.data, 1)
+                        out_hard.append(predicted)       
+                    predicted = torch.tensor([mode([out_hard[i][j] for i in range(len(out_hard))]) for j in range(len(out_hard[0]))]).to(self.device)
+
+                predict_ts = torch.cat([predict_ts, predicted], 0)
+                label_ts = torch.cat([label_ts, labels], 0)
+        acc = accuracy_score(label_ts.cpu(), predict_ts.cpu())
+        macro_f1 = f1_score(label_ts.cpu(), predict_ts.cpu(), average='macro')
+        # micro_f1 = f1_score(label_ts.cpu(), predict_ts.cpu(), average='micro')
+        # print('Accuracy, Macro F1, Micro F1 of Device %d on the %d test cases: %.2f %%, %.2f, %.2f' % (self.id, len(label_ts), acc*100, macro_f1, micro_f1))
+        print('Accuracy, Macro F1 of Device %d on the %d test cases: %.2f %%, %.2f %%' % (self.id, len(label_ts), acc*100, macro_f1*100))
+        self.test_metrics.append([acc, macro_f1])
 
 def get_csd_loss(model, mu, omega):
     loss_set = []
