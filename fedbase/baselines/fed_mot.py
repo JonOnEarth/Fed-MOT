@@ -11,6 +11,7 @@ import sys
 import inspect
 from functools import partial
 import copy
+import torch.nn as nn
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reduction = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None, temperature=torch.tensor(1.0)):
