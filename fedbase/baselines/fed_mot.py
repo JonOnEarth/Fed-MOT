@@ -56,8 +56,8 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     def weights_init(m):
         if isinstance(m, nn.Linear):
             torch.nn.init.normal_(m.weight, mean=0.0, std=1.0)
-            torch.nn.init.zero_(m.bias)
-
+            # torch.nn.init.zero_(m.bias)
+            
     # define init method inside your model class
     
     cluster_models = [model().apply(weights_init) for i in range(K)]
