@@ -29,6 +29,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     # local_models = [model() for i in range(num_nodes)]
     # local_loss = [objective() for i in range(num_nodes)]
 
+
     for i in range(num_nodes):
         # data
         # print(len(train_splited[i]), len(test_splited[i]))
@@ -50,7 +51,15 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     weight_list = [1.0 for i in range(num_nodes)]
 
     # initialize K cluster model
-    cluster_models = [model() for i in range(K)]
+    # this method can be defined outside your model class
+    def weights_init(m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.normal_(m.weight, mean=0.0, std=1.0)
+            torch.nn.init.zero_(m.bias)
+
+    # define init method inside your model class
+    
+    cluster_models = [model().apply(weights_init) for i in range(K)]
     cluster_models_lambda = [model_lambda for i in range(K)]
 
     
@@ -71,7 +80,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 if reduction == 'JPDA':
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
                 elif reduction == 'GNN':
-                    continue
+                    pass
                 nodes_k[i].append(nodes[j])
                 nodes_k_weight[i].append(nodes[j].weight)
             nodes_k_m[j] = nodes_k
