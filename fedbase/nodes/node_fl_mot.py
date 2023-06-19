@@ -115,7 +115,8 @@ class node():
             outputs = self.model(inputs)
             ce_loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
             ce_losss += ce_loss.item()
-        ce_losss = ce_losss/len(self.train)
+        # ce_losss = ce_losss/len(self.train)
+        
         self.weight = torch.exp(-ce_losss*temperature)
 
     def local_train_acc(self, model):

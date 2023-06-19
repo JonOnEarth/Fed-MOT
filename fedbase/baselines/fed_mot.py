@@ -117,13 +117,13 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
 
             # train
             for j in range(num_nodes):
-                nodes[j].assign_model(nodes_k_m[j][nodes_k_m_weight_max_index[j]].model)
-                nodes[j].assign_model_lambda(nodes_k_m[j][nodes_k_m_weight_max_index[j]].model_lambda)
+                nodes[j].assign_model(nodes_k_m[j][nodes_k_m_weight_max_index[j]][0].model)
+                nodes[j].assign_model_lambda(nodes_k_m[j][nodes_k_m_weight_max_index[j]][0].model_lambda)
                 nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
             # aggregate
             for i in range(K):
-                assign_ls = [j for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
-                weight_ls = [nodes_k_m_weight_max[j] for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
+                assign_ls = [j for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j][0]==i]
+                weight_ls = [nodes_k_m_weight_max[j] for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j][0]==i]
                 model_k, model_k_lambda = server.aggregate_bayes([nodes[j].model for j in assign_ls], [nodes[j].model_lambda for j in assign_ls], weight_ls, aggregated_method='GA')
                 server.distribute([nodes[j].model for j in assign_ls], model_k)
                 server.distribute_lambda([nodes[j].model_lambda for j in assign_ls], model_k_lambda)
