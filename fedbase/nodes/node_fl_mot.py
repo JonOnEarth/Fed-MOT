@@ -69,16 +69,16 @@ class node():
             for k, (inputs, labels) in enumerate(self.train):
                 train_single_step_func(inputs, labels)
 
-    def train_single_step_bayes(self, inputs, labels):  # client_update
+    def train_single_step_bayes(self, inputs, labels,csd_importance=1,clip=10):  # client_update
 
         new_lambda = dict()
         new_mu = dict()
         log_ce_loss = 0
         log_csd_loss = 0
-        model_state_dict = self.model.state_dict()
+        # model_state_dict = self.model.state_dict()
         for name, param in self.model.named_parameters():
             new_lambda[name] = copy.deepcopy(self.model_lambda[name])
-            new_mu[name] = copy.deepcopy(self.model_state_dict[name])
+            new_mu[name] = copy.deepcopy(self.model.state_dict()[name])
 
         inputs = inputs.to(self.device)
         labels = torch.flatten(labels)
@@ -88,7 +88,7 @@ class node():
         outputs = self.model(inputs)
         # ce_loss = self.criterion(output, target)
         ce_loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
-        csd_loss = get_csd_loss(self.model, new_mu, new_lambda) if self.csd_importance > 0 else 0
+        csd_loss = get_csd_loss(self.model, new_mu, new_lambda) if csd_importance > 0 else 0
         ce_loss.backward(retain_graph=True)
 
         for name, param in self.model.named_parameters():
@@ -96,9 +96,9 @@ class node():
                 self.model_lambda[name] +=  param.grad.data.clone() ** 2
 
         self.optim.zero_grad()
-        loss = ce_loss + self.csd_importance * csd_loss
+        loss = ce_loss + csd_importance * csd_loss
         loss.backward(retain_graph=True)
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.clip)
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip)
         self.optim.step()
 
         # log_ce_loss += ce_loss.item()
@@ -108,6 +108,7 @@ class node():
 
     def get_ce_loss(self, temperature):
         ce_losss = 0
+        num = 0
         for k, (inputs, labels) in enumerate(self.train):
             inputs = inputs.to(self.device)
             labels = torch.flatten(labels)
@@ -115,8 +116,10 @@ class node():
             outputs = self.model(inputs)
             ce_loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
             ce_losss += ce_loss.item()
-        # ce_losss = ce_losss/len(self.train)
-        
+            num += len(inputs)
+        # get ce loss of all data in train and average
+        ce_losss = ce_losss/num
+
         self.weight = torch.exp(-ce_losss*temperature)
 
     def local_train_acc(self, model):

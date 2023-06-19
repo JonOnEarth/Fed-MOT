@@ -23,7 +23,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     # define the parameter lambda
     model_lambda = dict()
     for name, param in server.model.named_parameters():
-        model_lambda[name] = torch.zeros_like(param)
+        model_lambda[name] = torch.ones_like(param)
     server.assign_model_lambda(model_lambda)
 
     nodes = [node(i, device) for i in range(num_nodes)]
@@ -114,7 +114,11 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             # get the biggest value of nodes_k_m_weight of each node and its index
             nodes_k_m_weight_max = [max(nodes_k_m_weight[j]) for j in range(num_nodes)]
             nodes_k_m_weight_max_index = [nodes_k_m_weight[j].index(max(nodes_k_m_weight[j])) for j in range(num_nodes)]
-
+            # reduce the nodes_k_m_weight_max to 1 dimension and normalize it
+            nodes_k_m_weight_max = torch.tensor(nodes_k_m_weight_max) / sum(torch.tensor(nodes_k_m_weight_max))
+            # turn two dimension to one dimension
+            nodes_k_m_weight_max = torch.tensor(nodes_k_m_weight_max).view(-1)
+            print('nodes_k_m_weight_max_index:', nodes_k_m_weight_max_index)
             # train
             for j in range(num_nodes):
                 nodes[j].assign_model(nodes_k_m[j][nodes_k_m_weight_max_index[j]][0].model)
@@ -122,35 +126,42 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
             # aggregate
             for i in range(K):
-                assign_ls = [j for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j][0]==i]
-                weight_ls = [nodes_k_m_weight_max[j] for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j][0]==i]
+                assign_ls = [j for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
+                weight_ls = [nodes_k_m_weight_max[j] for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
                 model_k, model_k_lambda = server.aggregate_bayes([nodes[j].model for j in assign_ls], [nodes[j].model_lambda for j in assign_ls], weight_ls, aggregated_method='GA')
                 server.distribute([nodes[j].model for j in assign_ls], model_k)
                 server.distribute_lambda([nodes[j].model_lambda for j in assign_ls], model_k_lambda)
-                cluster_models[i].load_state_dict(model_k)
+                for name, param in cluster_models[i].named_parameters():
+                    cluster_models[i].state_dict()[name].data.copy_(model_k[name])
+                # cluster_models[i].load_state_dict(model_k)
+                # for j in assign_ls:
+                #     nodes[j].assign_model(cluster_models[i]) 
+                #     nodes[j].assign_model_lambda(model_k_lambda)
+                
+                # cluster_models[i] = model_k
                 cluster_models_lambda[i] = model_k_lambda
             # test accuracy
             for j in range(num_nodes):
                 nodes[j].local_test()
-            server.acc(nodes, weight_list)
+            server.acc(nodes, nodes_k_m_weight_max)
 
-    if not finetune:
-        assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
-        # log
-        log(os.path.basename(__file__)[:-3] + add_(K)  + add_(split_para), nodes, server)
-        return cluster_models, assign
-    else:
-        if not finetune_steps:
-            finetune_steps = local_steps
-        # fine tune
-        for j in range(num_nodes):
-            # if not reg_lam:
-            #     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
-            # else:
-            #     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_fedprox, reg_model = cluster_models[nodes[j].label], reg_lam= reg_lam))
-            nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
-            nodes[j].local_test()
-        server.acc(nodes, weight_list)
-        # log
-        log(os.path.basename(__file__)[:-3] + add_('finetune') + add_(K)  + add_(split_para), nodes, server)
-        return [nodes[i].model for i in range(num_nodes)]
+    # if not finetune:
+    #     assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
+    #     # log
+    #     log(os.path.basename(__file__)[:-3] + add_(K)  + add_(split_para), nodes, server)
+    #     return cluster_models, assign
+    # else:
+    #     if not finetune_steps:
+    #         finetune_steps = local_steps
+    #     # fine tune
+    #     for j in range(num_nodes):
+    #         # if not reg_lam:
+    #         #     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
+    #         # else:
+    #         #     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_fedprox, reg_model = cluster_models[nodes[j].label], reg_lam= reg_lam))
+    #         nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
+    #         nodes[j].local_test()
+    #     server.acc(nodes, weight_list)
+    #     # log
+    #     log(os.path.basename(__file__)[:-3] + add_('finetune') + add_(K)  + add_(split_para), nodes, server)
+    #     return [nodes[i].model for i in range(num_nodes)]

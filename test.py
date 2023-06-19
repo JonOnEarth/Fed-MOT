@@ -14,7 +14,7 @@ import time
 import torchvision.models as models
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
-global_rounds = 3
+global_rounds = 20
 num_nodes = 20
 local_steps = 10
 batch_size = 32

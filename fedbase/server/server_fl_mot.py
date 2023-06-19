@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from pandas.plotting import parallel_coordinates
+import copy
 
 class server_class():
     def __init__(self, device):
@@ -36,11 +37,12 @@ class server_class():
         # update the server model
         new_param = {}
         new_lambda = {}
-
+        model_example = copy.deepcopy(model_list[0])
+        model_lambda_example = copy.deepcopy(model_lambda_list[0])
         with torch.no_grad():
-            for name, param in model_list[0].named_parameters():
+            for name, param in model_example.named_parameters():
                 new_param[name] = param.data.zero_()
-                new_lambda[name] = model_lambda_list[0][name].data.zero_()
+                new_lambda[name] = model_lambda_example[name].data.zero_()
                 if aggregated_method == 'GA':
                     for w, idx in zip(weight_list, range(len(model_list))):
                         new_param[name] += w * model_lambda_list[idx][name] * model_list[idx].state_dict()[name].to(self.device)
@@ -64,13 +66,21 @@ class server_class():
         if not model_dis_dict:
             model_dis_dict = self.model.state_dict()
         for i in model_in_list:
-            i.load_state_dict(model_dis_dict)
+            # i.load_state_dict(model_dis_dict)
+            for name, param in i.named_parameters():
+                i.state_dict()[name].data.copy_(model_dis_dict[name])  # https://discuss.pytorch.org/t/how-can-i
+                # -modify-certain-layers-weight-and-bias/11638
+                # self.server_lambda[name] = new_lambda[name]
 
     def distribute_lambda(self, model_lambda_in_list, model_lambda_dis_dict = None):
         if not model_lambda_dis_dict:
             model_lambda_dis_dict = self.model_lambda
         for i in model_lambda_in_list:
             i = model_lambda_dis_dict
+            # for name, param in i.named_parameters():
+            #     # i.state_dict()[name].data.copy_(model_dis_dict[name])  # https://discuss.pytorch.org/t/how-can-i
+            #     # # -modify-certain-layers-weight-and-bias/11638
+            #     i[name] = model_lambda_dis_dict[name]
 
     def acc(self, nodes, weight_list):
         global_test_metrics = [0]*2
