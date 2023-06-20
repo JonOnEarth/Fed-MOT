@@ -85,7 +85,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 ce_loss_k[i].append(nodes[j].get_ce_loss(temperature))
                 # nodes[i].local_train_loss(cluster_models[i])
                 if reduction == 'JPDA':
-                    nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
+                    nodes[j].local_update_epochs(local_steps, partial(nodes[j].train_single_step_bayes))
                 elif reduction == 'GNN':
                     pass
                 nodes_k[i].append(nodes[j])
@@ -132,7 +132,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 nodes[j].assign_model_lambda(nodes_k_m[j][nodes_k_m_weight_max_index[j]][0].model_lambda)
                 nodes[j].assign_optim(optimizer(nodes[j].model.parameters()))
 
-                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
+                nodes[j].local_update_epochs(local_steps, partial(nodes[j].train_single_step_bayes))
             # aggregate
             for i in range(K):
                 assign_ls = [j for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
