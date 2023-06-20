@@ -93,7 +93,8 @@ class node():
 
         for name, param in self.model.named_parameters():
             if param.grad is not None:
-                self.model_lambda[name] +=  param.grad.data.clone() ** 2
+                self.model_lambda[name] +=  (len(labels) / 
+                                self.data_size) * param.grad.data.clone() ** 2
 
         self.optim.zero_grad()
         loss = ce_loss + csd_importance * csd_loss
@@ -118,9 +119,29 @@ class node():
             ce_losss += ce_loss.item()
             num += len(inputs)
         # get ce loss of all data in train and average
-        ce_losss = ce_losss/num
+        ce_loss_weight = ce_losss/num
 
-        self.weight = torch.exp(-ce_losss*temperature)
+        self.weight = torch.exp(-ce_loss_weight*temperature)
+        return ce_losss
+    # for IFCA
+    def local_train_loss(self, model):
+        model.to(self.device)
+        train_loss = 0
+        i = 0
+        with torch.no_grad():
+            for data in self.train:
+                inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = torch.flatten(labels)
+                labels = labels.to(self.device, dtype = torch.long)
+                # forward
+                outputs = model(inputs)
+                train_loss += self.objective(outputs, labels)
+                i+=1
+                if i>=10:
+                    break
+        # return train_loss/len(self.train)
+        return train_loss/i
 
     def local_train_acc(self, model):
         model.to(self.device)
