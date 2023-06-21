@@ -94,6 +94,9 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             ce_loss_k_m[j] = ce_loss_k
         # server aggregation and distribution by cluster
         if reduction == 'JPDA':
+            # normalize the nodes_k_m_weight along the K dimension
+            for i in range(K):
+                nodes_k_m_weight[:,i] = nodes_k_m_weight[:,i]/sum(nodes_k_m_weight[:,i])
             for j in range(K):
                 model_k, model_k_lambda = server.aggregate_bayes([nodes_k_m[i][j].model for i in range(num_nodes)],\
                     [nodes_k_m[i][j].model_lambda for i in range(num_nodes)],\
@@ -101,19 +104,10 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 cluster_models[j].load_state_dict(model_k)
                 cluster_models_lambda[j] = model_k_lambda
             
-            # test
+            print('test ensemble\n')
             for j in range(num_nodes):
-                accs = []
-                weights = []
-                for i in range(K):
-                    nodes[j].assign_model(cluster_models[i])
-                    nodes[j].assign_model_lambda(cluster_models_lambda[i])
-                    nodes[j].get_ce_loss(temperature)
-                    nodes[j].test()
-                    accs.append(nodes[j].test_acc)
-                    weights.append(nodes[j].weight)
-                accs_node = sum(torch.tensor(accs)*torch.tensor(weights)/sum(weights))
-                print('Node %d test acc: %f' % (j, accs_node))
+                nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
+            server.acc(nodes, list(range(num_nodes)))
 
 
         elif reduction == 'GNN':
