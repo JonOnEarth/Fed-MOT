@@ -15,14 +15,14 @@ import torchvision.models as models
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
 global_rounds = 100
-num_nodes = 200
-local_steps = 10
+num_nodes = 20
+local_steps = 2
 batch_size = 32
 optimizer = partial(optim.SGD,lr=0.001, momentum=0.9)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
 device = torch.device('cuda')  # Use GPU if available
-K = 5
+K = 3
 
 @unpack_args 
 def main0(seeds, dataset_splited, model):
@@ -50,6 +50,7 @@ def main2(seeds, dataset_splited, model, K):
     # fesem.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, 0.95, device = device)
     # ifca.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, 0.95, device = device)
     fed_mot.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, reduction= 'GNN',device = device)
+
 # multiprocessing
 if __name__ == '__main__':
     seed = 1
@@ -96,7 +97,8 @@ if __name__ == '__main__':
     # ifca.run(data_process('medmnist_octmnist').split_dataset_groupwise(10, 0.1, 'dirichlet', 20, 5, 'dirichlet', plot_show= True), batch_size, 10, num_nodes, oct_net, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
     # print(a)
     # fed_mot.run(data_process('cifar10').split_dataset_groupwise(5, 3, 'class', 40, 2, 'class'), batch_size, 5, num_nodes, CNNCifar, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
-    fed_mot.run(data_process('fashion_mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNFashion_Mnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
+    # fed_mot.run(data_process('fashion_mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNFashion_Mnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
+    fed_mot.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
 
     # multi_processes = 2
     # seeds = 1
