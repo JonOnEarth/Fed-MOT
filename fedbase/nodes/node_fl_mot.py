@@ -69,16 +69,16 @@ class node():
             for k, (inputs, labels) in enumerate(self.train):
                 train_single_step_func(inputs, labels)
 
-    def train_single_step_bayes(self, inputs, labels,csd_importance=1,clip=10):  # client_update
+    def train_single_step_bayes(self, inputs, labels, csd_importance=1, clip=10, reg_model = None, reg_model_lambda=None):  # client_update
 
         new_lambda = dict()
         new_mu = dict()
-        log_ce_loss = 0
-        log_csd_loss = 0
+        # log_ce_loss = 0
+        # log_csd_loss = 0
         # model_state_dict = self.model.state_dict()
         for name, param in self.model.named_parameters():
-            new_lambda[name] = copy.deepcopy(self.model_lambda[name])
-            new_mu[name] = copy.deepcopy(self.model.state_dict()[name])
+            new_lambda[name] = copy.deepcopy(reg_model_lambda[name])
+            new_mu[name] = copy.deepcopy(reg_model.state_dict()[name])
 
         inputs = inputs.to(self.device)
         labels = torch.flatten(labels)

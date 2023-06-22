@@ -84,7 +84,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 ce_loss_k[i].append(nodes[j].get_ce_loss(temperature))
                 # nodes[i].local_train_loss(cluster_models[i])
                 if reduction == 'JPDA':
-                    nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
+                    nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = cluster_models[i], reg_model_lambda = cluster_models_lambda[i]))
                 elif reduction == 'GNN':
                     pass
                 nodes_k[i].append(nodes[j])
@@ -96,7 +96,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         if reduction == 'JPDA':
             # normalize the nodes_k_m_weight along the K dimension
             for i in range(K):
-                nodes_k_m_weight[:,i] = nodes_k_m_weight[:,i]/sum(nodes_k_m_weight[:,i])
+                nodes_k_m_weight[i][j] = nodes_k_m_weight[:,i]/sum(nodes_k_m_weight[:,i])
             for j in range(K):
                 model_k, model_k_lambda = server.aggregate_bayes([nodes_k_m[i][j].model for i in range(num_nodes)],\
                     [nodes_k_m[i][j].model_lambda for i in range(num_nodes)],\
@@ -125,13 +125,14 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 nodes[j].assign_model_lambda(nodes_k_m[j][nodes_k_m_weight_max_index[j]][0].model_lambda)
                 nodes[j].assign_optim(optimizer(nodes[j].model.parameters()))
 
-                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes))
+                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = cluster_models[i], reg_model_lambda = cluster_models_lambda[i]))
             # aggregate
             for i in range(K):
                 assign_ls = [j for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
                 # weight_ls = [nodes_k_m_weight_max[j] for j in list(range(num_nodes)) if nodes_k_m_weight_max_index[j]==i]
                 # weight_ls normalize
                 weight_ls = [1.0 for j in range(len(assign_ls))]
+                # weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
                 if len(assign_ls) != 0:
                     model_k, model_k_lambda = server.aggregate_bayes([nodes[j].model for j in assign_ls], [nodes[j].model_lambda for j in assign_ls], weight_ls, aggregated_method='GA')
                 else:
