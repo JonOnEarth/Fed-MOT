@@ -16,9 +16,9 @@ import torchvision.models as models
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
 global_rounds = 100
 num_nodes = 20
-local_steps = 2
+local_steps = 10
 batch_size = 32
-optimizer = partial(optim.SGD,lr=0.01, momentum=0.9)
+optimizer = partial(optim.SGD,lr=0.001, momentum=0.9)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
 device = torch.device('cuda')  # Use GPU if available
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     # fed_mot.run(data_process('cifar10').split_dataset_groupwise(5, 3, 'class', 40, 2, 'class'), batch_size, 5, num_nodes, CNNCifar, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
     # fed_mot.run(data_process('fashion_mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNFashion_Mnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
     # fed_mot.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='JPDA')
-    fedavg_bayes.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
+    fed_mot_ifca.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
     # multi_processes = 2
     # seeds = 1
     # # Run
