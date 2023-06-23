@@ -83,13 +83,18 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 model_k, model_k_lambda = server.aggregate_bayes([nodes[i].model for i in assignment[k]], [nodes[i].model_lambda for i in assignment[k]], weight_ls)
                 server.distribute([nodes[i].model for i in assignment[k]], model_k)
                 server.distribute_lambda([nodes[i].model_lambda for i in assignment[k]], model_k_lambda)
-                cluster_models[k].load_state_dict(model_k)
+                for name, param in cluster_models[k].named_parameters():
+                    cluster_models[k].state_dict()[name].data.copy_(model_k[name])
+                # cluster_models[k].load_state_dict(model_k)
                 cluster_models_lambda[k] = model_k_lambda
 
         # test accuracy
         for i in range(num_nodes):
             nodes[i].local_test()
         server.acc(nodes, weight_list)
+
+    # save the log
+    log(os.path.basename(__file__)[:-3] + add_(K)  + add_(split_para), nodes, server)
 
         # if not finetune:
         #     assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
