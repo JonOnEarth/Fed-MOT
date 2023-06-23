@@ -69,45 +69,45 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         print('-------------------Global round %d start-------------------' % (t))
         
         # local update for weight and JPDA training
-        nodes_k_m = [[] for j in range(num_nodes)]
-        nodes_k_m_weight = [[1] for j in range(num_nodes)]
-        ce_loss_k_m = [[] for j in range(num_nodes)]
+        nodes_k_m = []
+        nodes_k_m_weight = []
+        ce_loss_k_m = []
         for j in range(num_nodes):
-            nodes_k = [[] for i in range(K)]
-            nodes_k_weight = [[] for i in range(K)]
-            ce_loss_k = [[] for i in range(K)]
+            nodes_k = []
+            nodes_k_weight = []
+            ce_loss_k = []
             for i in range(K):
                 nodes[j].assign_model(cluster_models[i])
                 nodes[j].assign_model_lambda(cluster_models_lambda[i])
                 nodes[j].assign_optim(optimizer(nodes[j].model.parameters()))
 
-                ce_loss_k[i].append(nodes[j].get_ce_loss(temperature))
+                ce_loss_k.append(nodes[j].get_ce_loss(temperature))
                 # nodes[i].local_train_loss(cluster_models[i])
                 if reduction == 'JPDA':
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = cluster_models[i], reg_model_lambda = cluster_models_lambda[i]))
                 elif reduction == 'GNN':
                     pass
-                nodes_k[i].append(nodes[j])
-                nodes_k_weight[i].append(nodes[j].weight)
-            nodes_k_m[j] = nodes_k
-            nodes_k_m_weight[j] = nodes_k_weight
-            ce_loss_k_m[j] = ce_loss_k
+                nodes_k.append(nodes[j])
+                nodes_k_weight.append(nodes[j].weight)
+            nodes_k_m.append(nodes_k)
+            nodes_k_m_weight.append(nodes_k_weight)
+            ce_loss_k_m.append(ce_loss_k)
         # server aggregation and distribution by cluster
         if reduction == 'JPDA':
             # normalize the nodes_k_m_weight along the K dimension
-            for i in range(K):
-                nodes_k_m_weight[i][j] = nodes_k_m_weight[:,i]/sum(nodes_k_m_weight[:,i])
-            for j in range(K):
+            nodes_k_m_weight = torch.tensor(nodes_k_m_weight)
+            nodes_k_m_weight = nodes_k_m_weight/nodes_k_m_weight.sum(dim=0)
+            for j in range(K):        
                 model_k, model_k_lambda = server.aggregate_bayes([nodes_k_m[i][j].model for i in range(num_nodes)],\
                     [nodes_k_m[i][j].model_lambda for i in range(num_nodes)],\
-                          [nodes_k_m_weight[i][j] for i in range(num_nodes)],aggregated_method='AA')
+                        [nodes_k_m_weight[i][j] for i in range(num_nodes)],aggregated_method='AA')
                 cluster_models[j].load_state_dict(model_k)
                 cluster_models_lambda[j] = model_k_lambda
             
             print('test ensemble\n')
             for j in range(num_nodes):
                 nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
-            server.acc(nodes, list(range(num_nodes)))
+            server.acc(nodes, weight_list)
 
 
         elif reduction == 'GNN':
