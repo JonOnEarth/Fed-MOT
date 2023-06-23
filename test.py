@@ -99,7 +99,9 @@ if __name__ == '__main__':
     # fed_mot.run(data_process('cifar10').split_dataset_groupwise(5, 3, 'class', 40, 2, 'class'), batch_size, 5, num_nodes, CNNCifar, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
     # fed_mot.run(data_process('fashion_mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNFashion_Mnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
     # fed_mot.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='JPDA')
-    fed_mot_ifca.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
+    # fed_mot_ifca.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
+    ifca.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
+
     # multi_processes = 2
     # seeds = 1
     # # Run
