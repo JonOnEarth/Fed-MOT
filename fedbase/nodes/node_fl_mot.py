@@ -88,7 +88,7 @@ class node():
         outputs = self.model(inputs)
         # ce_loss = self.criterion(output, target)
         ce_loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
-        csd_loss = get_csd_loss(self.model, new_mu, new_lambda) if csd_importance > 0 else 0
+        csd_loss = self.get_csd_loss(self.model, new_mu, new_lambda) if csd_importance > 0 else 0
         ce_loss.backward(retain_graph=True)
 
         for name, param in self.model.named_parameters():
@@ -107,7 +107,7 @@ class node():
         # self.ce_loss = ce_loss.item()
         # return model, model_lambda, log_ce_loss
 
-    def get_ce_loss(self, temperature):
+    def get_ce_loss(self, temperature=torch.tensor(1.0)):
         ce_losss = 0
         num = 0
         for k, (inputs, labels) in enumerate(self.train):
@@ -223,14 +223,16 @@ class node():
         print('Accuracy, Macro F1 of Device %d on the %d test cases: %.2f %%, %.2f %%' % (self.id, len(label_ts), acc*100, macro_f1*100))
         self.test_metrics.append([acc, macro_f1])
 
-def get_csd_loss(model, mu, omega):
-    loss_set = []
-    for name, param in model.named_parameters():
-        theta = model.state_dict()[name]
-        # omega_dropout = torch.rand(omega[name].size()).cuda() if cuda else torch.rand(omega[name].size())
-        # omega_dropout[omega_dropout>0.5] = 1.0
-        # omega_dropout[omega_dropout <= 0.5] = 0.0
+    def get_csd_loss(self, model, mu, omega):
+        loss_set = []
+        for name, param in model.named_parameters():
+            theta = model.state_dict()[name]
+            # omega_dropout = torch.rand(omega[name].size()).cuda() if cuda else torch.rand(omega[name].size())
+            # omega_dropout[omega_dropout>0.5] = 1.0
+            # omega_dropout[omega_dropout <= 0.5] = 0.0
+            # RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+            mu[name] = mu[name].to(self.device)
+            omega[name] = omega[name].to(self.device)
+            loss_set.append((0.5) * (omega[name] * ((theta - mu[name]) ** 2)).sum())
 
-        loss_set.append((0.5) * (omega[name] * ((theta - mu[name]) ** 2)).sum())
-
-    return sum(loss_set)
+        return sum(loss_set)

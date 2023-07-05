@@ -15,7 +15,7 @@ import torchvision.models as models
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
 global_rounds = 100
-num_nodes = 20
+num_nodes = 200
 local_steps = 10
 batch_size = 32
 optimizer = partial(optim.SGD,lr=0.001, momentum=0.9)
@@ -100,7 +100,9 @@ if __name__ == '__main__':
     # fed_mot.run(data_process('fashion_mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNFashion_Mnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='GNN')
     # fed_mot.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,reduction='JPDA')
     # fed_mot_ifca.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
-    ifca.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
+    # ifca.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
+    ifca_con.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,warmup_rounds = 1, tmp = 0.1, mu =1, base = 'parameter', reg_lam = 0.01)
+    wecfl.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
 
     # multi_processes = 2
     # seeds = 1
