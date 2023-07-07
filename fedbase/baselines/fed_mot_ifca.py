@@ -13,10 +13,12 @@ from functools import partial
 import copy
 import torch.nn as nn
 
-def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, reg = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None):
+def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, H, reg = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),\
+         finetune=False, finetune_steps = None, weight_method = 'data_size',aggregated_method='GA'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
+    
     server = server_class(device)
     server.assign_model(model())
     model_lambda = dict()
@@ -39,7 +41,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         nodes[i].assign_objective(objective())
         # optim
         # nodes[i].assign_optim(optimizer(model().parameters()))
-    
+
     del train_splited, test_splited
 
     # initialize K cluster model
@@ -79,8 +81,15 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         # server aggregation and distribution by cluster
         for k in range(K):
             if len(assignment[k])>0:
-                weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assignment[k]]) for i in assignment[k]]
-                model_k, model_k_lambda = server.aggregate_bayes([nodes[i].model for i in assignment[k]], [nodes[i].model_lambda for i in assignment[k]], weight_ls)
+                if weight_method == 'uniform':
+                    weight_ls = [1/len(assignment[k]) for i in assignment[k]]
+                elif weight_method == 'data_size':
+                    weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assignment[k]]) for i in assignment[k]]
+                elif weight_method == 'loss':
+                    node_i_loss = [nodes[i].get_ce_loss() for i in assignment[k]]
+                    weight_ls = [nodes[i].weight/sum(nodes[i].weight for i in assignment[k]) for i in assignment[k]]
+
+                model_k, model_k_lambda = server.aggregate_bayes([nodes[i].model for i in assignment[k]], [nodes[i].model_lambda for i in assignment[k]], weight_ls,aggregated_method)
                 server.distribute([nodes[i].model for i in assignment[k]], model_k)
                 server.distribute_lambda([nodes[i].model_lambda for i in assignment[k]], model_k_lambda)
                 for name, param in cluster_models[k].named_parameters():

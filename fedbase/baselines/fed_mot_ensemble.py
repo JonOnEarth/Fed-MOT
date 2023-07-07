@@ -21,8 +21,12 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
     model_lambda = dict()
     for name, param in model().named_parameters():
         model_lambda[name] = torch.ones_like(param)
-
-    cluster_models = [model().to(device) for i in range(n_ensemble)]
+    
+    # this method can be defined outside your model class
+    def weights_init(m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.normal_(m.weight, mean=0.0, std=1.0)
+    cluster_models = [model().apply(weights_init).to(device) for i in range(n_ensemble)]
     cluster_models_lambda = [model_lambda for i in range(n_ensemble)]
 
     for n_en in range(n_ensemble):

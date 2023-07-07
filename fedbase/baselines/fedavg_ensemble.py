@@ -59,7 +59,7 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
     print('test ensemble\n')
     for j in range(num_nodes):
         nodes[j].local_ensemble_test(models, voting = 'soft')
-    server.acc(nodes, list(range(num_nodes)))
+    server.acc(nodes, weight_list)
 
     # log
     log(os.path.basename(__file__)[:-3] + add_(n_ensemble) + add_(split_para), nodes, server)
