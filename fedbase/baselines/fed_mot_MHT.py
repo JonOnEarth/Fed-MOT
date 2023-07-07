@@ -63,6 +63,8 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         servers_list.append(servers)
         nodes_list.append(nodes_l)
     print('nodes and servers initialized')
+    
+    weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
 
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))
@@ -72,7 +74,6 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
                 nodes = nodes_list[h][n_en]
 
                 # initialize parameters to nodes
-                weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
                 server.distribute([nodes[i].model for i in range(num_nodes)])
                 # train!
                 # for i in range(global_rounds):
