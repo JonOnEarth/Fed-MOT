@@ -29,6 +29,8 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
     cluster_models = [model().apply(weights_init).to(device) for i in range(n_ensemble)]
     cluster_models_lambda = [model_lambda for i in range(n_ensemble)]
 
+    servers_list = []
+    nodes_list = []
     for n_en in range(n_ensemble):
         server = server_class(device)
         server.assign_model(model())
@@ -52,15 +54,21 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
             nodes[i].assign_objective(objective())
             # optim
             nodes[i].assign_optim(optimizer(nodes[i].model.parameters()))
+        servers_list.append(server)
+        nodes_list.append(nodes)
+        print('K cluster %d initialized' % (n_en))
 
-        # initialize parameters to nodes
-        weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
-        server.distribute([nodes[i].model for i in range(num_nodes)])
+    # initialize parameters to nodes
+    weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
+    # server.distribute([nodes[i].model for i in range(num_nodes)])
 
-        # train!
-        for i in range(global_rounds):
-            print('-------------------Global round %d start-------------------' % (i))
-            # single-processing!
+    # train!
+    for i in range(global_rounds):
+        print('-------------------Global round %d start-------------------' % (i))
+        # single-processing!
+        for k in range(n_ensemble):
+            server = servers_list[k]
+            nodes = nodes_list[k]
             nodes_weight = []
             for j in range(num_nodes):
                 # nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
@@ -80,22 +88,31 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
             server.distribute_lambda([nodes[i].model_lambda for i in range(num_nodes)], model_k_lambda)
 
             # test accuracy
-            for j in range(num_nodes):
-                nodes[j].local_test()
-            server.acc(nodes, weight_list)
+            # for j in range(num_nodes):
+            #     nodes[j].local_test()
+            # server.acc(nodes, weight_list)
 
-        # update the cluster model
-        for name, param in cluster_models[n_en].named_parameters():
-            cluster_models[n_en].state_dict()[name].data.copy_(model_k[name])
-                
-        # # ensemble
-        # cluster_models[n_en]=server.model
+            # update the cluster model
+            for name, param in cluster_models[k].named_parameters():
+                cluster_models[k].state_dict()[name].data.copy_(model_k[name])
+                cluster_models_lambda[k][name].data.copy_(model_k_lambda[name])
+            
+            # update the servers_list and nodes_list
+            servers_list[k] = server
+            nodes_list[k] = nodes
+
+        # print the ensemble accuracy
+        print('test ensemble\n')
+        for j in range(num_nodes):
+            nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
+        server.acc(nodes, weight_list)        
+
 
     # test ensemble
-    print('test ensemble\n')
-    for j in range(num_nodes):
-        nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
-    server.acc(nodes, weight_list)
+    # print('test ensemble\n')
+    # for j in range(num_nodes):
+    #     nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
+    # server.acc(nodes, weight_list)
 
     # log
     log(os.path.basename(__file__)[:-3] + add_(n_ensemble) + add_(split_para), nodes, server)

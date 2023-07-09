@@ -63,7 +63,7 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         servers_list.append(servers)
         nodes_list.append(nodes_l)
     print('nodes and servers initialized')
-    
+
     weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
 
     for t in range(global_rounds):
@@ -74,7 +74,7 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
                 nodes = nodes_list[h][n_en]
 
                 # initialize parameters to nodes
-                server.distribute([nodes[i].model for i in range(num_nodes)])
+                # server.distribute([nodes[i].model for i in range(num_nodes)])
                 # train!
                 # for i in range(global_rounds):
                     # print('-------------------Global round %d start-------------------' % (i))
@@ -105,6 +105,8 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
                 # update the cluster model
                 for name, param in cluster_models[h][n_en].named_parameters():
                     cluster_models[h][n_en].state_dict()[name].data.copy_(model_k[name])
+                    cluster_models_lambda[h][n_en][name].data.copy_(model_k_lambda[name])
+
                 # update the servers
                 servers_list[h][n_en] = server
                 # update the nodes model
@@ -112,21 +114,23 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         # # ensemble
         # cluster_models[n_en]=server.model
 
-        # combine hypothesis
-        # cluster_models_comb = [model() for i in range(n_ensemble)]
-        # for k in range(n_ensemble):
-        #     for h in range(H):
-        #         for name, param in cluster_models[h][k].named_parameters():
-        #             if h == 0:
-        #                 cluster_models_comb[k].state_dict()[name].data.copy_(cluster_models[h][k].state_dict()[name])
-        #             else:
-        #                 cluster_models_comb[k].state_dict()[name] = 0.5*cluster_models_comb[k].state_dict()[name] + 0.5*cluster_models[h][k].state_dict()[name]
-        # #
+        
         # test ensemble
         print('test ensemble\n')
         combine = False
         if not combine:
             cluster_models_lst = [item for sublist in cluster_models for item in sublist]
+        # combine hypothesis
+        else:
+            cluster_models_comb = [model() for i in range(n_ensemble)]
+            for k in range(n_ensemble):
+                for h in range(H):
+                    for name, param in cluster_models[h][k].named_parameters():
+                        if h == 0:
+                            cluster_models_comb[k].state_dict()[name].data.copy_(cluster_models[h][k].state_dict()[name])
+                        else:
+                            cluster_models_comb[k].state_dict()[name] = 0.5*cluster_models_comb[k].state_dict()[name] + 0.5*cluster_models[h][k].state_dict()[name]
+            cluster_models_lst = cluster_models_comb
         for j in range(num_nodes):
             nodes[j].local_ensemble_test(cluster_models_lst, voting = 'soft') #cluster_models_comb
         server.acc(nodes, weight_list)
