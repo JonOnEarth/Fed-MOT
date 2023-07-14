@@ -21,7 +21,9 @@ batch_size = 32
 optimizer = partial(optim.SGD,lr=0.01, momentum=0.9)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
-device = torch.device('cuda')  # Use GPU if available
+# device = torch.device('cuda')  # Use GPU if available
+device = torch.device('mps' if torch.cuda.is_available() else 'cpu')
+# print(device)
 K = 2
 H = 2
 
@@ -54,7 +56,7 @@ def main2(seeds, dataset_splited, model, K):
 
 # multiprocessing
 if __name__ == '__main__':
-    seed = 1
+    seed = 1024
     np.random.seed(seed)
     torch.manual_seed(seed)
     # data_process('cifar10').split_dataset(200,2,'class')
@@ -114,11 +116,20 @@ if __name__ == '__main__':
     # fedavg_bayes.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, weight_method = 'loss',aggregated_method='AA')
 
     # fedavg_ensemble.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K)
-    fed_mot_ensemble.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K)
+    # K = 2
+    # fed_mot_ensemble.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K)
     # fed_mot_ifca.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
+    # fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='wecfl',bayes=True)
+
     # ifca.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
     # wecfl.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
-    # fed_mot_MHT.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K, H)
+    # wecfl_bayes.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size, K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps)
+    
+    # for MHT
+    K = 1
+    H = 2
+    fed_mot_MHT.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K, H, device)
+    # fedavg_bayes.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device, weight_method = 'loss',aggregated_method='AA')
 
     # multi_processes = 2
     # seeds = 1

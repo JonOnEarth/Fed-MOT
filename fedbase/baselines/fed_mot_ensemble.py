@@ -18,10 +18,14 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
     print('data splited')
+    server = server_class(device)
+    server.assign_model(model())
     model_lambda = dict()
     for name, param in model().named_parameters():
         model_lambda[name] = torch.ones_like(param)
+    server.assign_model_lambda(model_lambda)
     
+    # nodes = [node(i, device) for i in range(num_nodes)]
     # this method can be defined outside your model class
     def weights_init(m):
         if isinstance(m, nn.Linear):
@@ -29,15 +33,15 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
     cluster_models = [model().apply(weights_init).to(device) for i in range(n_ensemble)]
     cluster_models_lambda = [model_lambda for i in range(n_ensemble)]
 
-    servers_list = []
+    # servers_list = []
     nodes_list = []
     for n_en in range(n_ensemble):
-        server = server_class(device)
-        server.assign_model(model())
-        model_lambda = dict()
-        for name, param in server.model.named_parameters():
-            model_lambda[name] = torch.ones_like(param)
-        server.assign_model_lambda(model_lambda)
+        # server = server_class(device)
+        # server.assign_model(model())
+        # model_lambda = dict()
+        # for name, param in server.model.named_parameters():
+        #     model_lambda[name] = torch.ones_like(param)
+        # server.assign_model_lambda(model_lambda)
         nodes = [node(i, device) for i in range(num_nodes)]
         # local_models = [model() for i in range(num_nodes)]
         # local_loss = [objective() for i in range(num_nodes)]
@@ -54,7 +58,7 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
             nodes[i].assign_objective(objective())
             # optim
             nodes[i].assign_optim(optimizer(nodes[i].model.parameters()))
-        servers_list.append(server)
+        # servers_list.append(server)
         nodes_list.append(nodes)
         print('K cluster %d initialized' % (n_en))
 
@@ -63,12 +67,14 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
     # server.distribute([nodes[i].model for i in range(num_nodes)])
 
     # train!
-    for i in range(global_rounds):
-        print('-------------------Global round %d start-------------------' % (i))
+    for round in range(global_rounds):
+        print('-------------------Global round %d start-------------------' % (round))
         # single-processing!
         for k in range(n_ensemble):
-            server = servers_list[k]
+            # server = servers_list[k]
             nodes = nodes_list[k]
+            # sample the nodes
+            # nodes = server.sample_nodes(nodes_ori, sampling_rate=0.8, sample_with_replacement=False)
             nodes_weight = []
             for j in range(num_nodes):
                 # nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
@@ -81,8 +87,16 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
                 nodes_weight = nodes_weight/nodes_weight.sum(dim=0)
             elif weight_type == 'similarity':
                 pass
+            # print('nodes_weight', nodes_weight)
+            nodes_weight = torch.tensor(nodes_weight)
+            # randomly remove some nodes from the aggregation
+            for j in range(num_nodes):
+                if round <=5 and nodes_weight[j] < 0.1:
+                    nodes_weight[j] = nodes_weight[j]*torch.tensor([1 if torch.rand(1) > 0.5 else 0])
+            nodes_weight = nodes_weight/nodes_weight.sum(dim=0)
+            print('nodes_weight', nodes_weight)
             # server aggregation and distribution
-            model_k, model_k_lambda = server.aggregate_bayes([nodes[i].model for i in range(num_nodes)],\
+            model_k, model_k_lambda,_ = server.aggregate_bayes([nodes[i].model for i in range(num_nodes)],\
                     [nodes[i].model_lambda for i in range(num_nodes)], nodes_weight, aggregated_method='AA')
             server.distribute([nodes[i].model for i in range(num_nodes)],model_k)
             server.distribute_lambda([nodes[i].model_lambda for i in range(num_nodes)], model_k_lambda)
@@ -98,14 +112,14 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
                 cluster_models_lambda[k][name].data.copy_(model_k_lambda[name])
             
             # update the servers_list and nodes_list
-            servers_list[k] = server
+            # servers_list[k] = server
             nodes_list[k] = nodes
 
         # print the ensemble accuracy
         print('test ensemble\n')
         for j in range(num_nodes):
             nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
-        server.acc(nodes, weight_list)        
+        server.acc(nodes, weight_list)
 
 
     # test ensemble

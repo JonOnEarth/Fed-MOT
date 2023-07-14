@@ -11,7 +11,7 @@ from fedbase.server.server_fl_mot import server_class
 from fedbase.nodes.node_fl_mot import node
 
 def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, global_rounds, local_steps,\
-     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), log_file=True, finetune=False, finetune_steps = None,\
+     device, log_file=True, finetune=False, finetune_steps = None,\
           weight_method = 'loss',aggregated_method='AA'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
@@ -65,9 +65,9 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         # server aggregation and distribution
         new_param, new_lambda = server.aggregate_bayes([nodes[i].model for i in range(num_nodes)], [nodes[i].model_lambda for i in range(num_nodes)], weights, aggregated_method)
         # server.model.load_state_dict()
-        for name, param in server.model.named_parameters():
-            server.model.state_dict()[name].data.copy_(new_param[name])
-            server.model_lambda[name].data.copy_(new_lambda[name])
+        # for name, param in server.model.named_parameters():
+        #     server.model.state_dict()[name].data.copy_(new_param[name])
+        #     server.model_lambda[name].data.copy_(new_lambda[name])
         server.distribute([nodes[i].model for i in range(num_nodes)],new_param)
         server.distribute_lambda([nodes[i].model_lambda for i in range(num_nodes)],new_lambda)
         # test accuracy

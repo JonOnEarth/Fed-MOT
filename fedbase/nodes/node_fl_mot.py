@@ -69,6 +69,53 @@ class node():
             for k, (inputs, labels) in enumerate(self.train):
                 train_single_step_func(inputs, labels)
 
+    def train_single_step(self, inputs, labels):
+        inputs = inputs.to(self.device)
+        labels = torch.flatten(labels)
+        labels = labels.to(self.device, dtype = torch.long)
+        # print(labels)
+        # zero the parameter gradients
+        # self.model.zero_grad(set_to_none=True)
+        self.optim.zero_grad()
+        # forward + backward + optimize
+        outputs = self.model(inputs)
+        # optim
+        loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
+        loss.backward()
+
+        # calculate accumulate gradients
+        # grads = torch.tensor([])
+        # for index, param in enumerate(self.model.parameters()):
+        #     # param.grad = torch.tensor(grads[index])
+        #     grads= torch.cat((grads, torch.flatten(param.grad).cpu()),0)
+        # self.grads.append(grads)
+
+        self.optim.step()
+        # self.train_steps+=1
+        
+    # for fedprox and ditto
+    def train_single_step_fedprox(self, inputs, labels, reg_lam = None, reg_model = None):
+        inputs = inputs.to(self.device)
+        labels = torch.flatten(labels)
+        labels = labels.to(self.device, dtype = torch.long)
+        # zero the parameter gradients
+        # self.model.zero_grad(set_to_none=True)
+        self.optim.zero_grad()
+        # forward + backward + optimize
+        outputs = self.model(inputs)
+        # optim
+        if reg_lam:
+            reg_model.to(self.device)
+            reg = torch.square(torch.norm(torch.cat(tuple([torch.flatten(self.model.state_dict()[k] - reg_model.state_dict()[k])\
+                    for k in self.model.state_dict().keys()]),0),2))
+        else:
+            reg, reg_lam = 0, 0
+        self.loss = self.objective(outputs, labels) + reg_lam*reg/2
+        # print(self.objective(outputs, labels))
+        self.loss.backward()
+        self.optim.step()
+        # print('after', self.objective(self.model(inputs), labels))
+    
     def train_single_step_bayes(self, inputs, labels, csd_importance=1, clip=10, reg_model = None, reg_model_lambda=None):  # client_update
 
         new_lambda = dict()
@@ -107,7 +154,7 @@ class node():
         # self.ce_loss = ce_loss.item()
         # return model, model_lambda, log_ce_loss
 
-    def get_ce_loss(self, temperature=torch.tensor(1.0)):
+    def get_ce_loss(self, temperature=torch.tensor(10.0)):
         ce_losss = 0
         num = 0
         for k, (inputs, labels) in enumerate(self.train):

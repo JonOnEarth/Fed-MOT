@@ -219,7 +219,7 @@ class data_process:
         # plt.ylim((0,len(train_splited)-1))
         plt.show()
 
-def log(file_name, nodes, server):
+def log(file_name, nodes, server, H=None,assign_method=None, bayes=None):
     local_file = './log/' + file_name + "_" + d.datetime.now().strftime("%m%d_%H%M%S")+'_'+str(np.random.choice(10**3)) + ".json"
     log = {}
     log['node'] = {}
@@ -228,6 +228,9 @@ def log(file_name, nodes, server):
     try:
         log['server'] = list(server.test_metrics)
         log['clustering'] = str(server.clustering)
+        log['assign_method'] = str(assign_method)
+        log['bayes'] = str(bayes)
+        log['H'] = str(H)
     except:
         print('No server')
     # pd.to_pickle(log, local_file)
