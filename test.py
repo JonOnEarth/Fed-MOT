@@ -128,8 +128,9 @@ if __name__ == '__main__':
     # for MHT
     K = 1
     H = 2
-    fed_mot_MHT.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K, H, device)
+    # fed_mot_MHT.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, H, device, n_ensemble=1)
     # fedavg_bayes.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device, weight_method = 'loss',aggregated_method='AA')
+    single_MHT.run(data_process('mnist').split_dataset(num_nodes, 2, 'class'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, H, device)
 
     # multi_processes = 2
     # seeds = 1

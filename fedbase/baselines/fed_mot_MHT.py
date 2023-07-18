@@ -13,8 +13,8 @@ from functools import partial
 import copy
 import torch.nn as nn
 
-def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, global_rounds, local_steps, n_ensemble, H, device,\
-        weight_type='cluster'): #weight_type='data_size'
+def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, global_rounds, local_steps,  H, device, n_ensemble=1,\
+        weight_type='loss',cluster_method='kmeans', personalized_weight_type='loss'): #weight_type='data_size'
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -90,14 +90,14 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
             nodes_weight = []
             for j in range(num_nodes):
                 ce_loss = nodes[j].get_ce_loss()
-                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = cluster_models[n_en], reg_model_lambda = cluster_models_lambda[n_en]))
+                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = nodes[j].model, reg_model_lambda = nodes[j].model_lambda))
                 nodes_weight.append(nodes[j].weight)
                 # server aggregation weight
             nodes_weight = torch.tensor(nodes_weight)
             if weight_type == 'loss':
                 nodes_weight = nodes_weight/nodes_weight.sum(dim=0)
-            elif weight_type == 'similarity':
-                pass
+            elif weight_type == 'equal':
+                nodes_weight = torch.ones_like(nodes_weight)/num_nodes
             # print('nodes_weight', nodes_weight)
             nodes_weight = torch.tensor(nodes_weight)
 
@@ -121,42 +121,52 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
             models_H = [None for h in range(H)]
             models_H_lambda = [None for h in range(H)]
             weight_H = [None for h in range(H)]
+            nodes_fuse_weight_H = []
             for h in range(H):
                 assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==h]
                 if weight_type == 'data_size':
                     weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
                 else:
                     weight_ls = [nodes[i].weight for i in assign_ls]
+                weight_ls = torch.tensor(weight_ls)
                 model_k, model_k_lambda, weight_h = server.aggregate_bayes([nodes[i].model for i in range(num_nodes)],\
-                    [nodes[i].model_lambda for i in range(num_nodes)], nodes_weight, aggregated_method='AA')
+                    [nodes[i].model_lambda for i in range(num_nodes)], weight_ls, aggregated_method='AA')
                 models_H[h] = model_k
                 models_H_lambda[h] = model_k_lambda
                 weight_H[h] = weight_h
-                # send to local to calculate the loss
+            
+                # # send to local to calculate the loss
                 server.distribute([nodes[i].model for i in list(range(num_nodes))], model_k)
                 server.distribute_lambda([nodes[i].model_lambda for i in list(range(num_nodes))], model_k_lambda)
+                # change the list the model parameters to list of models
+                models_H[h] = nodes[0].model
+
+                nodes_fuse_weight_h = []
                 if personalized_weight_type == 'equal':
                     for j in range(num_nodes):
                         nodes[j].weight = 1/H
-                elif personalized_weight_type == 'loss':  
+                        nodes_fuse_weight_h.append(nodes[j].weight)# * weight_h)
+                elif personalized_weight_type == 'loss':
                     for j in range(num_nodes):
-                        nodes[j].get_ce_loss()
-                weight_h = 
-            
+                        ce_loss = nodes[j].get_ce_loss()
+                        nodes_fuse_weight_h.append(nodes[j].weight)# * weight_h)
+                nodes_fuse_weight_H.append(nodes_fuse_weight_h)
+
+            nodes_fuse_weight_H = torch.tensor(nodes_fuse_weight_H)/torch.tensor(nodes_fuse_weight_H).sum(dim=0)
+            # merge the models and weights for every node
+            for j in range(num_nodes):
+                weights_node = nodes_fuse_weight_H[:,j]
+                model_j, model_j_lambda, weight_j = server.aggregate_bayes(models_H, models_H_lambda, weights_node, aggregated_method='AA')
+                server.distribute([nodes[j].model], model_j)
+                server.distribute_lambda([nodes[j].model_lambda], model_j_lambda)
+                nodes[j].weight = weight_j
             # test accuracy of each hypothesis of each cluster
-            # for j in range(num_nodes):
-            #     nodes[j].local_test()
-            # server.acc(nodes, weight_list)
+                print('Test accuracy for every nodes\' personal accuracy:')
+                nodes[j].local_test()
+            print('Averay Test accuracy for all nodes:')
+            server.acc(nodes, weight_list)
 
-            # update the cluster model
-            for h in range(H):
-                server.distribute([nodes_list[n_en][h][i].model for i in range(num_nodes)],models_H[h])
-                server.distribute_lambda([nodes_list[n_en][h][i].model_lambda for i in range(num_nodes)], models_H_lambda[h])
-
-                for name, param in cluster_models[h][n_en].named_parameters():
-                    cluster_models[h][n_en].state_dict()[name].data.copy_(models_H[h][name])
-                    cluster_models_lambda[h][n_en][name].data.copy_(models_H_lambda[h][name])
-                cluster_weights[h][n_en] = weights_H[h]
+            nodes_list[k] = nodes
             # update the servers
             # servers_list[n_en] = server
             # update the nodes model
@@ -165,24 +175,24 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         # cluster_models[n_en]=server.model
 
         # test ensemble
-        print('test ensemble\n')
-        combine = False
-        if not combine:
-            cluster_models_lst = [item for sublist in cluster_models for item in sublist]
-        # combine hypothesis
-        else:
-            cluster_models_comb = [model() for i in range(n_ensemble)]
-            for k in range(n_ensemble):
-                for h in range(H):
-                    for name, param in cluster_models[h][k].named_parameters():
-                        if h == 0:
-                            cluster_models_comb[k].state_dict()[name].data.copy_(cluster_models[h][k].state_dict()[name])
-                        else:
-                            cluster_models_comb[k].state_dict()[name] = cluster_weights[h][n_en]*cluster_models_comb[k].state_dict()[name] + cluster_weights[h][n_en]*cluster_models[h][k].state_dict()[name]
-            cluster_models_lst = cluster_models_comb
-        for j in range(num_nodes):
-            nodes[j].local_ensemble_test(cluster_models_lst, voting = 'hard') #cluster_models_comb
-        server.acc(nodes, weight_list)
+        print('test ensemble\n, not for now')
+        # combine = False
+        # if not combine:
+        #     cluster_models_lst = [item for sublist in cluster_models for item in sublist]
+        # # combine hypothesis
+        # else:
+        #     cluster_models_comb = [model() for i in range(n_ensemble)]
+        #     for k in range(n_ensemble):
+        #         for h in range(H):
+        #             for name, param in cluster_models[h][k].named_parameters():
+        #                 if h == 0:
+        #                     cluster_models_comb[k].state_dict()[name].data.copy_(cluster_models[h][k].state_dict()[name])
+        #                 else:
+        #                     cluster_models_comb[k].state_dict()[name] = cluster_weights[h][n_en]*cluster_models_comb[k].state_dict()[name] + cluster_weights[h][n_en]*cluster_models[h][k].state_dict()[name]
+        #     cluster_models_lst = cluster_models_comb
+        # for j in range(num_nodes):
+        #     nodes[j].local_ensemble_test(cluster_models_lst, voting = 'hard') #cluster_models_comb
+        # server.acc(nodes, weight_list)
 
     # log
     log(os.path.basename(__file__)[:-3] + add_(n_ensemble)+add_(H) + add_(split_para), nodes, server)

@@ -217,3 +217,12 @@ class server_class():
         # Make the plot
         parallel_coordinates(data, 'id', colormap=plt.get_cmap("Set2"))
         plt.show()
+    # local prune function based on the rs
+
+    def prune_local(self, rs_client, left_num =1):
+        
+        rs_sort, idex = torch.sort(rs_client, descending=True)
+            # if idex is 0-dim tensor
+        if idex.dim() == 0:
+            idex = idex.unsqueeze(0)
+        return idex[:left_num] if idex[:left_num].dim() == 1 else idex[:left_num].squeeze(1)
