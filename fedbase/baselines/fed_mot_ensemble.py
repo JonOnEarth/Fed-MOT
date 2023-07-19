@@ -27,10 +27,10 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
     
     # nodes = [node(i, device) for i in range(num_nodes)]
     # this method can be defined outside your model class
-    def weights_init(m):
-        if isinstance(m, nn.Linear):
-            torch.nn.init.normal_(m.weight, mean=0.0, std=1.0)
-    cluster_models = [model().apply(weights_init).to(device) for i in range(n_ensemble)]
+    # def weights_init(m):
+    #     if isinstance(m, nn.Linear):
+    #         torch.nn.init.normal_(m.weight, mean=0.0, std=1.0)
+    cluster_models = [model() for i in range(n_ensemble)]
     cluster_models_lambda = [model_lambda for i in range(n_ensemble)]
 
     # servers_list = []
@@ -64,7 +64,7 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
 
     # initialize parameters to nodes
     weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
-    # server.distribute([nodes[i].model for i in range(num_nodes)])
+    server.distribute([nodes[i].model for i in range(num_nodes)])
 
     # train!
     for round in range(global_rounds):
@@ -92,7 +92,7 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
             # randomly remove some nodes from the aggregation
             for j in range(num_nodes):
                 if round <=5 and nodes_weight[j] < 0.1:
-                    nodes_weight[j] = nodes_weight[j]*torch.tensor([1 if torch.rand(1) > 0.5 else 0])
+                    nodes_weight[j] = nodes_weight[j]*torch.tensor([1 if torch.rand(1) > 0.3 else 0])
             nodes_weight = nodes_weight/nodes_weight.sum(dim=0)
             print('nodes_weight', nodes_weight)
             # server aggregation and distribution

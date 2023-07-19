@@ -63,7 +63,8 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
                 nodes[j].get_ce_loss()
             weights = [nodes[i].weight/sum(nodes[i].weight for i in range(num_nodes)) for i in range(num_nodes)]
         # server aggregation and distribution
-        new_param, new_lambda = server.aggregate_bayes([nodes[i].model for i in range(num_nodes)], [nodes[i].model_lambda for i in range(num_nodes)], weights, aggregated_method)
+        weights = torch.tensor(weights)
+        new_param, new_lambda,_ = server.aggregate_bayes([nodes[i].model for i in range(num_nodes)], [nodes[i].model_lambda for i in range(num_nodes)], weights, aggregated_method)
         # server.model.load_state_dict()
         # for name, param in server.model.named_parameters():
         #     server.model.state_dict()[name].data.copy_(new_param[name])
@@ -89,5 +90,5 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
             nodes[j].local_test()
         server.acc(nodes, weight_list)
         # log
-        log(os.path.basename(__file__)[:-3] + add_('finetune') + add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] + add_(aggregated_method) + add_('finetune') + add_(split_para), nodes, server)
         return [nodes[i].model for i in range(num_nodes)]

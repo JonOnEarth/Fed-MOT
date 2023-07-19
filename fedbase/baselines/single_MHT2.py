@@ -20,7 +20,7 @@ from functools import partial
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
-        assign_method='ifca', bayes=True):
+        assign_method='ifca', bayes=True, weight_type='loss'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -58,7 +58,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     # initialize K cluster model
     cluster_models = [model() for i in range(K)]
     cluster_models_lambda = [model_lambda for i in range(K)]
-
+    cluster_models_weights = [1/K for i in range(K)]
     # train!
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))
@@ -77,6 +77,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 nodes[j].assign_model(cluster_models[m])
                 nodes[j].assign_model_lambda(cluster_models_lambda[m])
                 nodes[j].assign_optim(optimizer(nodes[j].model.parameters()))
+                nodes[j].get_ce_loss()
                 # local update
                 if t == 0 or not bayes:
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
@@ -97,7 +98,10 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         # server aggregation and distribution by cluster
         for k in range(K):
             assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
-            weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
+            if weight_type == 'data_size':
+                weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
+            elif weight_type == 'loss':
+                weight_ls = [nodes[i].weight for i in assign_ls]
             weight_ls = torch.tensor(weight_ls)
             # model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
             if not bayes:
@@ -105,14 +109,22 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 server.distribute([nodes[i].model for i in assign_ls], model_k)
                 cluster_models[k].load_state_dict(model_k)
             else:
-                model_k, model_lambda_k,_ = server.aggregate_bayes([nodes[i].model for i in assign_ls], [nodes[i].model_lambda for i in assign_ls], weight_ls)
+                model_k, model_lambda_k, weight_k = server.aggregate_bayes([nodes[i].model for i in assign_ls], [nodes[i].model_lambda for i in assign_ls], weight_ls)
                 server.distribute([nodes[i].model for i in assign_ls], model_k)
                 server.distribute_lambda([nodes[i].model_lambda for i in assign_ls], model_lambda_k)
             
                 for name, param in cluster_models[k].named_parameters():
                     cluster_models[k].state_dict()[name].data.copy_(model_k[name])
                 cluster_models_lambda[k] = model_lambda_k
-
+                cluster_models_weights[k] = weight_k * cluster_models_weights[k]
+        # normalized the cluster_Models_weights
+        cluster_models_weights = [cluster_models_weights[i]/sum(cluster_models_weights) for i in range(K)]
+        
+        # print the ensemble accuracy
+        # print('test ensemble\n')
+        # for j in range(num_nodes):
+        #     nodes[j].local_ensemble_test(cluster_models, voting = 'hard')
+        # server.acc(nodes, weight_list)
         # test accuracy
         for j in range(num_nodes):
             nodes[j].local_test()
@@ -135,5 +147,5 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             nodes[j].local_test()
         server.acc(nodes, weight_list)
         # log
-        log(os.path.basename(__file__)[:-3] + add_('finetune')+add_(assign_method) + add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] + add_('finetune') + add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
         return [nodes[i].model for i in range(num_nodes)]

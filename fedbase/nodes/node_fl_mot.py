@@ -123,6 +123,7 @@ class node():
         # log_ce_loss = 0
         # log_csd_loss = 0
         # model_state_dict = self.model.state_dict()
+        reg_model.to(self.device)
         for name, param in self.model.named_parameters():
             new_lambda[name] = copy.deepcopy(reg_model_lambda[name])
             new_mu[name] = copy.deepcopy(reg_model.state_dict()[name])

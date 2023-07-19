@@ -49,6 +49,8 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         nodes[i].assign_optim(optimizer(nodes[i].model.parameters()))
         # nodes_list.append(nodes)
     del train_splited, test_splited
+    # initialize parameters to nodes
+    server.distribute([nodes[i].model for i in range(num_nodes)])
     weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
     
     for round in range(global_rounds):

@@ -46,7 +46,8 @@ class server_class():
                 new_param[name] = param.data.zero_()
                 new_lambda[name] = model_lambda_example[name].data.zero_()
                 if aggregated_method == 'GA':
-                    for w, idx in zip(weight_list, range(len(model_list))):
+                    weight_list_new = [1/len(model_list)] * len(model_list)
+                    for w, idx in zip(weight_list_new, range(len(model_list))):
                         new_param[name] += w * model_lambda_list[idx][name] * model_list[idx].state_dict()[name].to(self.device)
                         new_lambda[name] += w * model_lambda_list[idx][name]
                     # new_param[name] -= (sum(weight_list) - 1) * self.server_lambda[name] * \
