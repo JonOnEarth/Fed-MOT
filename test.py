@@ -117,12 +117,19 @@ if __name__ == '__main__':
 
     # fedavg_ensemble.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K)
     # K = 2
-    fed_mot_ensemble.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size, num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K, device=device, weight_type='loss')
+    # fed_mot_ensemble.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size, num_nodes, CNNMnist,  nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, K, device=device, weight_type='loss')
     # fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='wecfl',bayes=True)
     # assign_method='wecfl',bayes=false
     # fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='wecfl',bayes=False,device=device)
     # assign_method='ifca',bayes=True
     # fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='ifca',bayes=True,device=device)
+    # assign_method='ifca',bayes=True, warm_up=True, warm_up_steps=2
+    # fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='ifca',bayes=True,device=device,warm_up=True, warm_up_steps=2)
+    # assign_method='ifca',bayes=False, warm_up=False, warm_up_steps=2
+    # fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='ifca',bayes=False,device=device,warm_up=False, warm_up_steps=2)
+    # assign_method='ifca',bayes=False, warm_up=True, warm_up_steps=2
+    fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='ifca',bayes=False,device=device,warm_up=True, warm_up_steps=2)
+    
     # # MHT:ifca, GA
     # single_MHT2.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='ifca',bayes=True,weight_type='loss',device=device)
 

@@ -17,10 +17,11 @@ import os
 import sys
 import inspect
 from functools import partial
+import copy
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
-        assign_method='ifca', bayes=True):
+        assign_method='ifca', bayes=True, warm_up=False, warm_up_steps=2):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -59,9 +60,14 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     cluster_models = [model() for i in range(K)]
     cluster_models_lambda = [model_lambda for i in range(K)]
 
+    assign_method_copy = copy.deepcopy(assign_method)
     # train!
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))
+        if assign_method== 'ifca' and warm_up==True and t <= warm_up_steps:
+            assign_method = 'wecfl'
+        else:
+            assign_method = assign_method_copy
         
         if assign_method == 'ifca':
             # local update
@@ -121,7 +127,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
         # log
-        log(os.path.basename(__file__)[:-3] + add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] + add_(assign_method)+add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
         return cluster_models, assign
     else:
         if not finetune_steps:
