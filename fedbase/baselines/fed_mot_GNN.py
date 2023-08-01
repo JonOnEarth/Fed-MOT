@@ -21,7 +21,7 @@ import copy
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
-        assign_method='ifca', bayes=True, warm_up=False, warm_up_steps=2):
+        assign_method='ifca', bayes=True, warm_up=False, warm_up_steps=2,accuracy_type='single'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -82,7 +82,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 nodes[j].label = m
                 nodes[j].assign_model(cluster_models[m])
                 nodes[j].assign_model_lambda(cluster_models_lambda[m])
-                nodes[j].assign_optim(optimizer(nodes[j].model.parameters()))
+                # nodes[j].assign_optim(optimizer(nodes[j].model.parameters()))
                 # local update
                 if t == 0 or not bayes:
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
@@ -90,7 +90,8 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = cluster_models[nodes[j].label], reg_model_lambda = cluster_models_lambda[nodes[j].label]))
             # print(server.clustering)
             server.clustering['label'].append(assignment)
-            print('clustering: ', assignment)
+            # print('clustering: ', assignment)
+            print([nodes[j].label for j in range(num_nodes)])
         elif assign_method == 'wecfl':
             for j in range(num_nodes):
                 if t == 0 or not bayes:
@@ -100,6 +101,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             # server clustering, assign_method=='wecfl'
             server.weighted_clustering(nodes, list(range(num_nodes)), K)
 
+    
         # server aggregation and distribution by cluster
         for k in range(K):
             assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
@@ -120,9 +122,15 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 cluster_models_lambda[k] = model_lambda_k
 
         # test accuracy
-        for j in range(num_nodes):
-            nodes[j].local_test()
-        server.acc(nodes, weight_list)
+        if accuracy_type == 'single':
+            for j in range(num_nodes):
+                nodes[j].local_test()
+            server.acc(nodes, weight_list)
+        elif accuracy_type == 'ensemble':
+            print('test ensemble\n')
+            for j in range(num_nodes):
+                nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
+            server.acc(nodes, weight_list)
     
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]

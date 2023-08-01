@@ -14,6 +14,7 @@ class server_class():
         self.device = device
         self.test_metrics = []
         self.clustering = {'label':[], 'raw':[], 'center':[]}
+        self.test_metrics_best = []
 
     def assign_model(self, model):
         try:
@@ -141,6 +142,16 @@ class server_class():
             #     # # -modify-certain-layers-weight-and-bias/11638
             #     i[name] = model_lambda_dis_dict[name]
 
+    def acc2(self, nodes, weight_list,type=None):
+        global_test_metrics = [0]*2
+        for i in range(len(weight_list)):
+            for j in range(len(global_test_metrics)):
+                global_test_metrics[j] += weight_list[i]*nodes[i].test_metrics[-1][j]
+        print('GLOBAL Accuracy, Macro F1 is %.2f %%, %.2f %%' % (100*global_test_metrics[0], 100*global_test_metrics[1]))
+        if type=='save':
+            self.test_metrics_best.append(global_test_metrics)
+        return global_test_metrics
+
     def acc(self, nodes, weight_list):
         global_test_metrics = [0]*2
         for i in range(len(weight_list)):
@@ -192,6 +203,22 @@ class server_class():
         self.clustering['label'].append(list(labels.astype(int)))
         # self.clustering['raw'].append(X)
         # self.clustering['center'].append(kmeans.cluster_centers_)
+
+    def soft_clustering(self, nodes, idlist, K, weight_type='data_size'):
+        weight = []
+        X = []
+        sum_size = sum([nodes[i].data_size for i in idlist])
+        # print(list(nodes[0].model.state_dict().keys()))
+        for i in idlist:
+            if weight_type == 'equal':
+                weight.append(1/len(idlist))
+            elif weight_type == 'data_size':
+                weight.append(nodes[i].data_size/sum_size)
+            elif weight_type == 'loss':
+                weight.append(nodes[i].weight)
+            X.append(np.array(torch.flatten(nodes[i].model.state_dict()[list(nodes[i].model.state_dict().keys())[-2]]).cpu()))
+        
+
 
     def sample_nodes(self, nodes, sampling_rate,sample_with_replacement):
         n_nodes = max(1, int(len(nodes)*sampling_rate))

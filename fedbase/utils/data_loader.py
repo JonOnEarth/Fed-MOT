@@ -227,6 +227,7 @@ def log(file_name, nodes, server, H=None,assign_method=None, bayes=None):
         log['node'][str(i)] = list(nodes[i].test_metrics)
     try:
         log['server'] = list(server.test_metrics)
+        log['best_assignment'] = list(server.test_metrics_best)
         log['clustering'] = str(server.clustering)
         log['assign_method'] = str(assign_method)
         log['bayes'] = str(bayes)

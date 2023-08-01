@@ -1,6 +1,13 @@
+'''
+can be used for Bayesian or non-Bayesian, and IFCA or WECFL methods
+assign_method=[”ifca”,'wecfl'], bayes=[True, False]
+'''
+
 from fedbase.utils.data_loader import data_process, log
+# from fedbase.nodes.node import node
 from fedbase.nodes.node_fl_mot import node
 from fedbase.utils.tools import add_
+# from fedbase.server.server import server_class
 from fedbase.server.server_fl_mot import server_class
 import torch
 from torch.utils.data import DataLoader
@@ -11,10 +18,11 @@ import sys
 import inspect
 from functools import partial
 import copy
-import torch.nn as nn
+from fedbase.utils import assignment_func
 
-def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, global_rounds, local_steps,  H, device, n_ensemble=1,\
-        weight_type='loss',cluster_method='kmeans', personalized_weight_type='loss'): #weight_type='data_size'
+def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
+    reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
+         bayes=True,num_assign=2,hypothesis=2):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -25,176 +33,183 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         model_lambda[name] = torch.ones_like(param)
     server.assign_model_lambda(model_lambda)
 
-    # this method can be defined outside your model class
-    def weights_init(m):
-        if isinstance(m, nn.Linear):
-            torch.nn.init.normal_(m.weight, mean=0.0, std=1.0)
-    # cluster_models = [[model().apply(weights_init).to(device) for i in range(n_ensemble)] for h in range(H)]
-    cluster_models = [[model().to(device) for i in range(n_ensemble)] for h in range(H)]
-    cluster_models_lambda = [[model_lambda for i in range(n_ensemble)] for h in range(H)]
-    cluster_weights = [[1/H for i in range(n_ensemble)] for h in range(H)]
-    # cluster_weights = torch.tensor(cluster_weights, device=device)
-    
-    nodes_list = []
-    # for n_en in range(n_ensemble):
-    #     nodes_H = []
-    #     for h in range(H):
-    #         nodes = [node(i, device) for i in range(num_nodes)]
-    #         for i in range(num_nodes):
-    #             # data
-    #             # print(len(train_splited[i]), len(test_splited[i]))
-    #             nodes[i].assign_train(DataLoader(train_splited[i], batch_size=batch_size, shuffle=True))
-    #             nodes[i].assign_test(DataLoader(test_splited[i], batch_size=batch_size, shuffle=False))
-    #             # model
-    #             nodes[i].assign_model(model())
-    #             nodes[i].assign_model_lambda(model_lambda)
-    #             # objective
-    #             nodes[i].assign_objective(objective())
-    #             # optim
-    #             nodes[i].assign_optim(optimizer(nodes[i].model.parameters()))
-    #         # align the paramters of nodes
-    #         server.distribute([nodes[i].model for i in range(num_nodes)])
-    #         server.distribute_lambda([nodes[i].model_lambda for i in range(num_nodes)])
-    #         nodes_H.append(nodes)
-    #     nodes_list.append(nodes_H)
-    #     print('K cluster %d initialized' % (n_en))
-    for n_en in range(n_ensemble):
-        nodes = [node(i, device) for i in range(num_nodes)]
-        for i in range(num_nodes):
-            # data
-            # print(len(train_splited[i]), len(test_splited[i]))
-            nodes[i].assign_train(DataLoader(train_splited[i], batch_size=batch_size, shuffle=True))
-            nodes[i].assign_test(DataLoader(test_splited[i], batch_size=batch_size, shuffle=False))
-            # model
-            nodes[i].assign_model(model())
-            nodes[i].assign_model_lambda(model_lambda)
-            # objective
-            nodes[i].assign_objective(objective())
-            # optim
-            nodes[i].assign_optim(optimizer(nodes[i].model.parameters()))
-        # servers_list.append(server)
-        nodes_list.append(nodes)
-        print('K cluster %d initialized' % (n_en))
+    nodes = [node(i, device) for i in range(num_nodes)]
+    # local_models = [model() for i in range(num_nodes)]
+    # local_loss = [objective() for i in range(num_nodes)]
+    # bayes = True
 
+    for i in range(num_nodes):
+        # data
+        # print(len(train_splited[i]), len(test_splited[i]))
+        nodes[i].assign_train(DataLoader(train_splited[i], batch_size=batch_size, shuffle=True))
+        nodes[i].assign_test(DataLoader(test_splited[i], batch_size=batch_size, shuffle=False))
+        # model
+        nodes[i].assign_model(model())
+        nodes[i].assign_model_lambda(model_lambda)
+        # objective
+        nodes[i].assign_objective(objective())
+        # optim
+        nodes[i].assign_optim(optimizer(nodes[i].model.parameters()))
+    
     del train_splited, test_splited
+
+    # initialize parameters to nodes
+    server.distribute([nodes[i].model for i in range(num_nodes)])
     weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
-    
-    for round in range(global_rounds):
-        print('-------------------Global round %d start-------------------' % (round))
-        # single-processing!
-        for k in range(n_ensemble):
-            # server = servers_list[k]
-            nodes = nodes_list[k]
-            # sample the nodes
-            # nodes = server.sample_nodes(nodes_ori, sampling_rate=0.8, sample_with_replacement=False)
-            nodes_weight = []
-            for j in range(num_nodes):
-                ce_loss = nodes[j].get_ce_loss()
-                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = nodes[j].model, reg_model_lambda = nodes[j].model_lambda))
-                nodes_weight.append(nodes[j].weight)
-                # server aggregation weight
-            nodes_weight = torch.tensor(nodes_weight)
-            if weight_type == 'loss':
-                nodes_weight = nodes_weight/nodes_weight.sum(dim=0)
-            elif weight_type == 'equal':
-                nodes_weight = torch.ones_like(nodes_weight)/num_nodes
-            # print('nodes_weight', nodes_weight)
-            nodes_weight = torch.tensor(nodes_weight)
 
-            # decide which nodes should cluster together
-            if cluster_method == 'ifca':
-                # local update
-                assignment = [[] for i in range(n_ensemble)]
-                for j in range(num_nodes):
-                    m = 0
-                    for h in range(1, H):
-                        # print(nodes[i].local_train_loss(cluster_models[m]), nodes[i].local_train_loss(cluster_models[k]))
-                        if nodes[j].local_train_loss(cluster_models[m][k])>=nodes[j].local_train_loss(cluster_models[h][k]):
-                            m = h
-                    assignment[m].append(j)
-                    nodes[j].label = m
-                server.clustering['label'].append(assignment)
-            elif cluster_method == 'kmeans':
-                server.weighted_clustering(nodes, list(range(num_nodes)), H, weight_type='loss')
+    # initialize K cluster model
+    cluster_models = [model() for i in range(K)]
+    cluster_models_lambda = [model_lambda for i in range(K)]
 
-            # aggregate the models
-            models_H = [None for h in range(H)]
-            models_H_lambda = [None for h in range(H)]
-            weight_H = [None for h in range(H)]
-            nodes_fuse_weight_H = []
-            for h in range(H):
-                assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==h]
-                if weight_type == 'data_size':
-                    weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
-                else:
-                    weight_ls = [nodes[i].weight for i in assign_ls]
-                weight_ls = torch.tensor(weight_ls)
-                model_k, model_k_lambda, weight_h = server.aggregate_bayes([nodes[i].model for i in range(num_nodes)],\
-                    [nodes[i].model_lambda for i in range(num_nodes)], weight_ls, aggregated_method='AA')
-                models_H[h] = model_k
-                models_H_lambda[h] = model_k_lambda
-                weight_H[h] = weight_h
+    cluster_models_assignments_hypothesis = [copy.deepcopy(cluster_models) for i in range(hypothesis)]
+    cluster_models_lambda_assignments_hypothesis = [copy.deepcopy(cluster_models_lambda) for i in range(hypothesis)]
+    cost_ks_assignments_hypothesis = [torch.log(torch.tensor(1/hypothesis))] * hypothesis
+
+    # server_accuracy = torch.zeros(global_rounds)
+    # train!
+    for t in range(global_rounds):
+        print('-------------------Global round %d start-------------------' % (t))
+
+        cost_ks_assignments_hypothesis_new = []
+        cluster_models_assignments_hypothesis_new = []
+        cluster_models_lambda_assignments_hypothesis_new = []
+
+        for h in range(hypothesis):
             
-                # # send to local to calculate the loss
-                server.distribute([nodes[i].model for i in list(range(num_nodes))], model_k)
-                server.distribute_lambda([nodes[i].model_lambda for i in list(range(num_nodes))], model_k_lambda)
-                # change the list the model parameters to list of models
-                models_H[h] = nodes[0].model
-
-                nodes_fuse_weight_h = []
-                if personalized_weight_type == 'equal':
-                    for j in range(num_nodes):
-                        nodes[j].weight = 1/H
-                        nodes_fuse_weight_h.append(nodes[j].weight)# * weight_h)
-                elif personalized_weight_type == 'loss':
-                    for j in range(num_nodes):
-                        ce_loss = nodes[j].get_ce_loss()
-                        nodes_fuse_weight_h.append(nodes[j].weight)# * weight_h)
-                nodes_fuse_weight_H.append(nodes_fuse_weight_h)
-
-            nodes_fuse_weight_H = torch.tensor(nodes_fuse_weight_H)/torch.tensor(nodes_fuse_weight_H).sum(dim=0)
-            # merge the models and weights for every node
+            cost_matrix = torch.zeros((num_nodes, K))
+            cluster_models = cluster_models_assignments_hypothesis[h]
+            cluster_models_lambda = cluster_models_lambda_assignments_hypothesis[h]
             for j in range(num_nodes):
-                weights_node = nodes_fuse_weight_H[:,j]
-                model_j, model_j_lambda, weight_j = server.aggregate_bayes(models_H, models_H_lambda, weights_node, aggregated_method='AA')
-                server.distribute([nodes[j].model], model_j)
-                server.distribute_lambda([nodes[j].model_lambda], model_j_lambda)
-                nodes[j].weight = weight_j
-            # test accuracy of each hypothesis of each cluster
-                print('Test accuracy for every nodes\' personal accuracy:')
-                nodes[j].local_test()
-            print('Averay Test accuracy for all nodes:')
-            server.acc(nodes, weight_list)
+                for k in range(0, K):
+                    # build the cost matrix
+                    loss = nodes[j].local_train_loss(cluster_models[k])
+                    cost_matrix[j][k] = loss
+            assignments = assignment_func.get_num_assignments(cost_matrix.numpy(), num_assign)
+            print('assignments: ', assignments)
+            trained_index = []
+            trained_nodes = []
+            nodes_assignments = [copy.deepcopy(nodes) for a in range(len(assignments))]
+            cost_ks_assignments = []
+            cluster_models_assignments = []
+            cluster_models_lambda_assignments = []
+            for a, assign in enumerate(assignments): # assign is a list of cluster index of nodes
+                nodes = nodes_assignments[a]
+                for j in range(num_nodes):
+                    nodes[j].label = assign[j] # = k
+                    nodes[j].assign_model(cluster_models[assign[j]])
+                    nodes[j].assign_model_lambda(cluster_models_lambda[assign[j]])
+                    # check if the node is trained in this round
+                    if [j, assign[j]] in trained_index:
+                        # return the index of [j, assign[j]] in trained_index
+                        index = trained_index.index([j, assign[j]])
+                        nodes[j] = copy.deepcopy(trained_nodes[index])
+                    else:
+                        # local update
+                        if t == 0 or not bayes:
+                            nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
+                        else:
+                            nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = cluster_models[nodes[j].label], reg_model_lambda = cluster_models_lambda[nodes[j].label]))
+                        trained_index.append([j, assign[j]])
+                        trained_nodes.append(nodes[j])
+                
+                # calculate the cost of the assignment for each cluster
+                cost_ks = []
+                cluster_models_temp = [model() for i in range(K)]
+                cluster_models_lambda_temp = [model_lambda for i in range(K)]
+                for k in range(K):
+                    cost_k = sum([cost_matrix[j][k] for j in range(num_nodes) if nodes[j].label == k])
+                    cost_ks.append(cost_k)
+                    # for this assignment, aggregate the assigned nodes' models
+                    assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
+                    weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
+                    weight_ls = torch.tensor(weight_ls)
+                    if not bayes:
+                        model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
+                        server.distribute([nodes[i].model for i in assign_ls], model_k)
+                        cluster_models_temp[k].load_state_dict(model_k)
+                    else:
+                        model_k, model_lambda_k,_ = server.aggregate_bayes([nodes[i].model for i in assign_ls], [nodes[i].model_lambda for i in assign_ls], weight_ls)
+                        server.distribute([nodes[i].model for i in assign_ls], model_k)
+                        server.distribute_lambda([nodes[i].model_lambda for i in assign_ls], model_lambda_k)
+                    
+                        for name, param in cluster_models_temp[k].named_parameters():
+                            cluster_models_temp[k].state_dict()[name].data.copy_(model_k[name])
+                        cluster_models_lambda_temp[k] = model_lambda_k
+                cost_ks_assignments.append(sum(cost_ks)+cost_ks_assignments_hypothesis[h]) # here sum of all cost of assignments + previous cost of this hypothesis
+                cluster_models_assignments.append(cluster_models_temp)
+                cluster_models_lambda_assignments.append(cluster_models_lambda_temp)
 
-            nodes_list[k] = nodes
-            # update the servers
-            # servers_list[n_en] = server
-            # update the nodes model
-            # nodes_list[h][n_en] = nodes
-        # # ensemble
-        # cluster_models[n_en]=server.model
+                # # test accuracy
+                # if accuracy_type == 'single':
+                print('test single of assignment %d\n' % (a))
+                if a == 0 and h == 0:
+                    type='save'
+                    # only save the best assignment metrics
+                    for j in range(num_nodes):
+                        nodes[j].local_test()
+                    global_test_metrics = server.acc2(nodes, weight_list, type)
+                    server.clustering['label'].append(assign)
+                else:
+                    for j in range(num_nodes):
+                        nodes[j].local_test()
+                    server.acc2(nodes, weight_list)
 
-        # test ensemble
-        print('test ensemble\n, not for now')
-        # combine = False
-        # if not combine:
-        #     cluster_models_lst = [item for sublist in cluster_models for item in sublist]
-        # # combine hypothesis
-        # else:
-        #     cluster_models_comb = [model() for i in range(n_ensemble)]
-        #     for k in range(n_ensemble):
-        #         for h in range(H):
-        #             for name, param in cluster_models[h][k].named_parameters():
-        #                 if h == 0:
-        #                     cluster_models_comb[k].state_dict()[name].data.copy_(cluster_models[h][k].state_dict()[name])
-        #                 else:
-        #                     cluster_models_comb[k].state_dict()[name] = cluster_weights[h][n_en]*cluster_models_comb[k].state_dict()[name] + cluster_weights[h][n_en]*cluster_models[h][k].state_dict()[name]
-        #     cluster_models_lst = cluster_models_comb
-        # for j in range(num_nodes):
-        #     nodes[j].local_ensemble_test(cluster_models_lst, voting = 'hard') #cluster_models_comb
-        # server.acc(nodes, weight_list)
+                # elif accuracy_type == 'ensemble':
+                #     print('test ensemble\n')
+                #     for j in range(num_nodes):
+                #         nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
+                #     server.acc(nodes, weight_list)
 
-    # log
-    log(os.path.basename(__file__)[:-3] + add_(n_ensemble)+add_(H) + add_(split_para), nodes, server)
+            cost_ks_assignments_hypothesis_new.extend(cost_ks_assignments)
+            cluster_models_assignments_hypothesis_new.extend(cluster_models_assignments)
+            cluster_models_lambda_assignments_hypothesis_new.extend(cluster_models_lambda_assignments)
 
-    return cluster_models
+        # prune the temp hypothesis to hypothesis
+        cost_ks_assignments_hypothesis_new = torch.tensor(cost_ks_assignments_hypothesis_new)
+        print('cost_ks_assignments_hypothesis_new: ', cost_ks_assignments_hypothesis_new)
+        sorted_index = torch.argsort(cost_ks_assignments_hypothesis_new)
+        cap = sorted_index[:hypothesis]
+        cost_ks_assignments_hypothesis = torch.tensor([cost_ks_assignments_hypothesis_new[i] for i in cap])
+        print('cost_ks_assignments_hypothesis: ', cost_ks_assignments_hypothesis)
+        cluster_models_assignments_hypothesis = [cluster_models_assignments_hypothesis_new[i] for i in cap]
+        cluster_models_lambda_assignments_hypothesis = [cluster_models_lambda_assignments_hypothesis_new[i] for i in cap]
+        # normalize the cost
+        if hypothesis > 1:
+            bs = torch.zeros(len(cost_ks_assignments_hypothesis))
+            for i,los in enumerate(cost_ks_assignments_hypothesis):
+                bs[i] = los-cost_ks_assignments_hypothesis.max()
+            cost_ks_assignments_hypothesis = bs - torch.log(1+sum(torch.exp(bs[:hypothesis-1])))
+
+    
+        # test accuracy
+        # if accuracy_type == 'single':
+        #     for j in range(num_nodes):
+        #         nodes[j].local_test()
+        #     server.acc(nodes, weight_list)
+        # elif accuracy_type == 'ensemble':
+        #     print('test ensemble\n')
+        print('test ensemble of each round \n')
+        for j in range(num_nodes):
+            nodes[j].local_ensemble_test(cluster_models_assignments_hypothesis[0], voting = 'max')
+        server.acc(nodes, weight_list)
+
+
+    if not finetune:
+        assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
+        # log
+        log(os.path.basename(__file__)[:-3] +add_(K) + add_(num_assign)+ add_(hypothesis) + add_(split_para), nodes, server)
+        return cluster_models, assign
+    else:
+        if not finetune_steps:
+            finetune_steps = local_steps
+        # fine tune
+        for j in range(num_nodes):
+            if not reg_lam:
+                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
+            else:
+                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_fedprox, reg_model = cluster_models[nodes[j].label], reg_lam= reg_lam))
+            nodes[j].local_test()
+        server.acc(nodes, weight_list)
+        # log
+        log(os.path.basename(__file__)[:-3] + add_('finetune') + add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
+        return [nodes[i].model for i in range(num_nodes)]

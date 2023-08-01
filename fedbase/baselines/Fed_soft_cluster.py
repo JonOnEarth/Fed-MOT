@@ -1,3 +1,5 @@
+
+
 '''
 can be used for Bayesian or non-Bayesian, and IFCA or WECFL methods
 assign_method=[”ifca”,'wecfl'], bayes=[True, False]
@@ -17,11 +19,11 @@ import os
 import sys
 import inspect
 from functools import partial
-import math
+import copy
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
-        assign_method='ifca', bayes=True, weight_type='loss',accuracy_type='single', temperature=10):
+        assign_method='ifca', bayes=True, warm_up=False, warm_up_steps=2,accuracy_type='single'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -59,15 +61,19 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     # initialize K cluster model
     cluster_models = [model() for i in range(K)]
     cluster_models_lambda = [model_lambda for i in range(K)]
-    cluster_models_weights = [1/K for i in range(K)]
+
+    assign_method_copy = copy.deepcopy(assign_method)
     # train!
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))
+        if assign_method== 'ifca' and warm_up==True and t <= warm_up_steps:
+            assign_method = 'wecfl'
+        else:
+            assign_method = assign_method_copy
         
         if assign_method == 'ifca':
             # local update
             assignment = [[] for i in range(K)]
-            ce_losss = []
             for j in range(num_nodes):
                 m = 0
                 for k in range(1, K):
@@ -79,8 +85,6 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 nodes[j].assign_model(cluster_models[m])
                 nodes[j].assign_model_lambda(cluster_models_lambda[m])
                 # nodes[j].assign_optim(optimizer(nodes[j].model.parameters()))
-                ce_loss = nodes[j].get_ce_loss()
-                ce_losss.append(ce_loss)
                 # local update
                 if t == 0 or not bayes:
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
@@ -99,52 +103,44 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             # server clustering, assign_method=='wecfl'
             server.weighted_clustering(nodes, list(range(num_nodes)), K)
 
+        if multi_assign==True:
+            assignments = server.soft_clustering(nodes, list(range(num_nodes)), K)
+
+    
         # server aggregation and distribution by cluster
         for k in range(K):
             assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
-            # if weight_type == 'data_size':
             weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
             weight_ls = torch.tensor(weight_ls)
-        # elif weight_type == 'loss':
-            # weight_ls = [nodes[i].weight for i in assign_ls]
-            nodes_size = sum([nodes[i].data_size for i in assign_ls])
-            ce_loss_ls = sum([ce_losss[i] for i in assign_ls])
-            weight_k = math.exp(-ce_loss_ls/nodes_size * temperature)
-            weight_k = torch.tensor(weight_k)
-            # weight_ls = torch.tensor(weight_ls)/torch.sum(torch.tensor(weight_ls))
             # model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
             if not bayes:
                 model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
                 server.distribute([nodes[i].model for i in assign_ls], model_k)
                 cluster_models[k].load_state_dict(model_k)
             else:
-                model_k, model_lambda_k, _ = server.aggregate_bayes([nodes[i].model for i in assign_ls], [nodes[i].model_lambda for i in assign_ls], weight_ls)
+                model_k, model_lambda_k,_ = server.aggregate_bayes([nodes[i].model for i in assign_ls], [nodes[i].model_lambda for i in assign_ls], weight_ls)
                 server.distribute([nodes[i].model for i in assign_ls], model_k)
                 server.distribute_lambda([nodes[i].model_lambda for i in assign_ls], model_lambda_k)
             
                 for name, param in cluster_models[k].named_parameters():
                     cluster_models[k].state_dict()[name].data.copy_(model_k[name])
                 cluster_models_lambda[k] = model_lambda_k
-                cluster_models_weights[k] = weight_k #* cluster_models_weights[k]
-        # normalized the cluster_Models_weights
-        cluster_models_weights = [cluster_models_weights[i]/sum(cluster_models_weights) for i in range(K)]
-        print('cluster_models_weights: ', cluster_models_weights)
-        if accuracy_type == 'ensemble':
-            # print the ensemble accuracy
-            print('test ensemble\n')
-            for j in range(num_nodes):
-                nodes[j].local_ensemble_test2(cluster_models,cluster_models_weights, voting = 'sum_weighted')
-            server.acc(nodes, weight_list)
-        elif accuracy_type == 'single': # choose which model is better for this node to test
-            # test accuracy
+
+        # test accuracy
+        if accuracy_type == 'single':
             for j in range(num_nodes):
                 nodes[j].local_test()
+            server.acc(nodes, weight_list)
+        elif accuracy_type == 'ensemble':
+            print('test ensemble\n')
+            for j in range(num_nodes):
+                nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
             server.acc(nodes, weight_list)
     
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
         # log
-        log(os.path.basename(__file__)[:-3] + add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] + add_(assign_method)+add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
         return cluster_models, assign
     else:
         if not finetune_steps:
@@ -158,5 +154,5 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             nodes[j].local_test()
         server.acc(nodes, weight_list)
         # log
-        log(os.path.basename(__file__)[:-3] + add_('finetune') + add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] + add_('finetune')+add_(assign_method) + add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
         return [nodes[i].model for i in range(num_nodes)]
