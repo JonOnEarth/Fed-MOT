@@ -57,8 +57,8 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     server.distribute([nodes[i].model for i in range(num_nodes)])
     weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
 
-    # initialize K cluster model
-    cluster_models = [model() for i in range(K)]
+    # initialize K cluster model and lambda and send the model to device
+    cluster_models = [model().to(device) for i in range(K)]
     cluster_models_lambda = [model_lambda for i in range(K)]
 
     server_accuracy = torch.zeros(global_rounds)
@@ -161,12 +161,18 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         weight_assignments = weight_assignments/weight_assignments.sum(0)
         # aggregate the cluster models of all assignments by weight
         for k in range(K):
-            model_k2, model_lambda_k2,_ = server.aggregate_bayes([cluster_models_assignments[a][k] for a in range(len(assignments))],\
-                                    [cluster_models_lambda_assignments[a][k] for a in range(len(assignments))],\
-                                          weight_assignments[:,k])
-            for name, param in cluster_models[k].named_parameters():
-                    cluster_models[k].state_dict()[name].data.copy_(model_k2[name])
-            cluster_models_lambda[k] = model_lambda_k2
+            if not bayes:
+                model_k2 = server.aggregate([cluster_models_assignments[a][k].to(device) for a in range(len(assignments))],\
+                                    weight_assignments[:,k])
+                # server.distribute([cluster_models_assignments[a][k].to(device) for a in range(len(assignments))], model_k)
+                cluster_models[k].load_state_dict(model_k)
+            else:
+                model_k2, model_lambda_k2,_ = server.aggregate_bayes([cluster_models_assignments[a][k].to(device) for a in range(len(assignments))],\
+                                        [cluster_models_lambda_assignments[a][k] for a in range(len(assignments))],\
+                                            weight_assignments[:,k])
+                for name, param in cluster_models[k].named_parameters():
+                        cluster_models[k].state_dict()[name].data.copy_(model_k2[name])
+                cluster_models_lambda[k] = model_lambda_k2
 
         # test accuracy
         # if accuracy_type == 'single':

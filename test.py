@@ -128,9 +128,9 @@ if __name__ == '__main__':
     # assign_method='ifca',bayes=True, accuracy_type='ensemble'
     # fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='ifca',bayes=True,device=device,accuracy_type='ensemble')
     # jpda
-    # fed_mot_jpda.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,bayes=True,device=device,num_assign=3)
+    fed_mot_jpda.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,bayes=False,device=device,num_assign=3)
     # MHT
-    fed_mot_mht.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,bayes=True,device=device,num_assign=2,hypothesis=2)
+    # fed_mot_mht.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,bayes=True,device=device,num_assign=2,hypothesis=2)
 
     # assign_method='ifca',bayes=True, warm_up=True, warm_up_steps=2
     # fed_mot_GNN.run(data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'), batch_size,K, num_nodes, CNNMnist, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps,assign_method='ifca',bayes=True,device=device,warm_up=True, warm_up_steps=2)
