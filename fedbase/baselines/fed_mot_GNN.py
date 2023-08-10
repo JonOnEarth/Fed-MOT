@@ -105,6 +105,8 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         # server aggregation and distribution by cluster
         for k in range(K):
             assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
+            if assign_ls == []:
+                continue
             weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
             weight_ls = torch.tensor(weight_ls)
             # model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)

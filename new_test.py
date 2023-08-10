@@ -50,27 +50,42 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None):
         fed_mot_mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device)
 
 if __name__ == '__main__':
-    dataset = 'Mnist'
+    dataset = 'mnist'
     seeds = 0
-    if dataset == 'Mnist':
+    if dataset == 'mnist':
         model = CNNMnist
-        K = 2
-        n_assign_list = [2,4,6]
-        dataset_splited_list = [data_process('mnist').split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),
-                           data_process('mnist').split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class'),\
-                            data_process('mnist').split_dataset(num_nodes, 2, 'class'),\
-                            data_process('mnist').split_dataset(num_nodes, 0.1, 'dirichlet')]
-        model_name_list1 = ['FedAvg','BayesFedAvg','Wecfl','Fesem','GNN']
-        model_name_list2 = ['JPDA','MHT']
+    elif dataset == 'femnist':
+        model = CNNFemnist
+    elif dataset == 'fashion_mnist':
+        model = CNNFashion_Mnist
+    elif dataset == 'cifar10':
+        model = CNNCifar
 
-        Parallel(n_jobs=8)(delayed(main)(seeds, dataset_splited, model, model_name, K) \
-                           for dataset_splited in dataset_splited_list \
-                            for model_name in model_name_list1)
-        
-        
-        Parallel(n_jobs=8)(delayed(main)(seeds, dataset_splited, model, model_name,K, n_assign) \
-                           for dataset_splited in dataset_splited_list \
-                            for model_name in model_name_list2 \
-                                for n_assign in n_assign_list)
+    K = 4
+    num_nodes = 20
+    n_assign_list = [2,4,6]
+    noise = 'rotation'
+    dataset_splited_list = [
+        data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
+        data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class')#,\
+        # data_process(dataset).split_dataset(num_nodes, 2, 'class'),\
+        # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
+        # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
+        # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
+                        ] # rotation
+    model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',
+    model_name_list2 = ['JPDA'] #,'MHT'
 
-    # elif dataset == 'Cifar10':
+    Parallel(n_jobs=8)(delayed(main)(seeds, dataset_splited, model, model_name, K+1) \
+                        for dataset_splited in dataset_splited_list \
+                        for model_name in model_name_list1)
+    
+    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name,K+1, n_assign) \
+                        for dataset_splited in dataset_splited_list \
+                        for model_name in model_name_list2 \
+                            for n_assign in n_assign_list)
+
+    
+    # main(seeds, dataset_splited_list[-1], model, model_name_list2[0], K=K, n_assign=n_assign_list[1])
+    # main(seeds, dataset_splited_list[-1], model, model_name_list2[1], K=K, n_assign=n_assign_list[1])
+

@@ -114,13 +114,17 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 
                 # calculate the cost of the assignment for each cluster
                 cost_ks = []
-                cluster_models_temp = [model() for i in range(K)]
-                cluster_models_lambda_temp = [model_lambda for i in range(K)]
+                cluster_models_temp = copy.deepcopy(cluster_models_assignments_hypothesis[h])
+                cluster_models_lambda_temp = copy.deepcopy(cluster_models_lambda_assignments_hypothesis[h])
                 for k in range(K):
                     cost_k = sum([cost_matrix[j][k] for j in range(num_nodes) if nodes[j].label == k])
+                    if sum([nodes[j].label == k for j in range(num_nodes)]) == 0:
+                        cost_k = 0
                     cost_ks.append(cost_k)
                     # for this assignment, aggregate the assigned nodes' models
                     assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
+                    if assign_ls == []:
+                        continue
                     weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
                     weight_ls = torch.tensor(weight_ls)
                     if not bayes:

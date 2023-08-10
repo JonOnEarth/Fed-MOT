@@ -16,6 +16,7 @@ import math
 import pandas as pd
 from pathlib import Path
 from collections import Counter
+import torchvision.transforms.functional as TF
 # import medmnist
 
 class data_process:
@@ -98,7 +99,7 @@ class data_process:
         # # print labels
         # print(' '.join('%5s' % classes[labels[j]] for j in range(batch_size)))
 
-    def split_dataset(self, num_nodes, alpha, method='dirichlet', train_dataset = None, test_dataset = None, plot_show = False):
+    def split_dataset(self, num_nodes, alpha, method='dirichlet',noise=None, train_dataset = None, test_dataset = None, plot_show = False):
         train_dataset = self.train_dataset if train_dataset is None else train_dataset
         test_dataset = self.test_dataset if test_dataset is None else test_dataset
         train_targets, test_targets = get_targets(train_dataset), get_targets(test_dataset)
@@ -112,6 +113,18 @@ class data_process:
                 # plot
                 labels = torch.unique(train_targets)
                 self.plot_split(labels, train_splited)
+                # add noise
+                if noise == 'rotation':
+                    for i in range(len(train_splited)):
+                        # for j in range(len(train_splited[i])):
+                        for img, label in train_splited[i]:
+                            # img_temp0 = img.permute(1, 2, 0)
+                            # plt.imshow(img_temp0[:,:,0])
+                            img = TF.rotate(img, 45)
+                    for i in range(len(test_splited)):
+                        # for j in range(len(test_splited[i])):
+                        for img, label in test_splited[i]:
+                            img = TF.rotate(img, 45)
                 return train_splited, test_splited
             else:
                 labels, train_label_size = torch.unique(train_targets, return_counts=True)
@@ -171,19 +184,34 @@ class data_process:
                     self.plot_split(labels, train_splited)
                 # print(min([len(i) for i in train_splited]))
                 # print(min([len(i) for i in test_splited]))
-                return train_splited, test_splited, self.dataset_name +'_'+ str(num_nodes)+'_'+ str(alpha)+'_'+ str(method)
+                if noise == 'rotation':
+                    for i in range(len(train_splited)):
+                        # for j in range(len(train_splited[i])):
+                        for img, label in train_splited[i]:
+                            # img_temp0 = img.permute(1, 2, 0)
+                            # plt.imshow(img_temp0[:,:,0])
+                            img = TF.rotate(img, 45)
+                            # img is [1: 28: 28], change to [28: 28: 1]
+                            # img_temp = img.permute(1, 2, 0)
+                            # plt.imshow(img_temp[:,:,0])
+                            # plt.show()
+                    for i in range(len(test_splited)):
+                        # for j in range(len(test_splited[i])):
+                        for img, label in test_splited[i]:
+                            img = TF.rotate(img, 45)
+                return train_splited, test_splited, self.dataset_name +'_'+ str(num_nodes)+'_'+ str(alpha)+'_'+ str(method)+'_'+ str(noise)
         
-    def split_dataset_groupwise(self, num0, alpha0, method0, num1, alpha1, method1, train_dataset = None, test_dataset = None, plot_show = False):
+    def split_dataset_groupwise(self, num0, alpha0, method0, num1, alpha1, method1, noise=None, train_dataset = None, test_dataset = None, plot_show = False):
         train_dataset = self.train_dataset if train_dataset is None else train_dataset
         test_dataset = self.test_dataset if test_dataset is None else test_dataset
         train_targets = get_targets(train_dataset)
         train_splited = []
         test_splited = []
         # to control min length of group dataset
-        train_splited_0, test_splited_0, _ = self.split_dataset(num0, alpha0, method0)
+        train_splited_0, test_splited_0, _ = self.split_dataset(num0, alpha0, method0, noise=noise)
         while (min([len(test_splited_0[i]) for i in range(len(test_splited_0))]) <= len(test_dataset)/num0 * 0.3):
             # print('do it again')
-            train_splited_0, test_splited_0, _ = self.split_dataset(num0, alpha0, method0)
+            train_splited_0, test_splited_0, _ = self.split_dataset(num0, alpha0, method0,noise=noise)
         for i in range(num0):
             train_tmp, test_tmp, _ = self.split_dataset(num1, alpha1, method1, train_dataset=train_splited_0[i], test_dataset=test_splited_0[i])
             train_splited += train_tmp
@@ -218,6 +246,16 @@ class data_process:
         plt.ylabel('Client ID', fontsize=16)
         # plt.ylim((0,len(train_splited)-1))
         plt.show()
+
+    # def add_rotation_noise(train_data,label, alpha):
+    #     train_data_rotated = []
+    #     for i in range(len(train_data)):
+    #         train_data_rotated.append(train_data[i].rotate(alpha))
+    #     plt.imshow(train_data_rotated[0][0].squeeze().numpy(), cmap='gray')
+    #     plt.show()
+
+        # return train_data_rotated
+
 
 def log(file_name, nodes, server, H=None,assign_method=None, bayes=None):
     local_file = './log/' + file_name + "_" + d.datetime.now().strftime("%m%d_%H%M%S")+'_'+str(np.random.choice(10**3)) + ".json"

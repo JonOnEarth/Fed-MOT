@@ -80,6 +80,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 loss = nodes[j].local_train_loss(cluster_models[k])
                 cost_matrix[j][k] = loss
         assignments = assignment_func.get_num_assignments(cost_matrix.numpy(), num_assign)
+        print('assignments: ', assignments)
         trained_index = []
         trained_nodes = []
         nodes_associations = [copy.deepcopy(nodes) for a in range(len(assignments))]
@@ -108,13 +109,18 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             
             # calculate the cost of the assignment for each cluster
             cost_ks = []
-            cluster_models_temp = [model() for i in range(K)]
-            cluster_models_lambda_temp = [model_lambda for i in range(K)]
+            cluster_models_temp = copy.deepcopy(cluster_models)
+            cluster_models_lambda_temp = copy.deepcopy(cluster_models_lambda)
             for k in range(K):
                 cost_k = sum([cost_matrix[j][k] for j in range(num_nodes) if nodes[j].label == k])
+                # think about the exception
+                if sum([nodes[j].label == k for j in range(num_nodes)]) == 0:
+                    cost_k = 0
                 cost_ks.append(cost_k)
                 # for this assignment, aggregate the assigned nodes' models
                 assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
+                if assign_ls == []:
+                    continue
                 weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
                 weight_ls = torch.tensor(weight_ls)
                 if not bayes:
@@ -161,6 +167,8 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         weight_assignments = weight_assignments/weight_assignments.sum(0)
         # aggregate the cluster models of all assignments by weight
         for k in range(K):
+            if weight_assignments[:,k].sum() == 0:
+                continue
             if not bayes:
                 model_k2 = server.aggregate([cluster_models_assignments[a][k].to(device) for a in range(len(assignments))],\
                                     weight_assignments[:,k])
