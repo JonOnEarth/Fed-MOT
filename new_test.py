@@ -66,12 +66,14 @@ if __name__ == '__main__':
     n_assign_list = [2,4,6]
     noise = 'rotation'
     dataset_splited_list = [
-        data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
-        data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class')#,\
+        # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
+        # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class')#,\
         # data_process(dataset).split_dataset(num_nodes, 2, 'class'),\
         # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
+        data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 3, 'class', noise) ,\
+        data_process(dataset).split_dataset_groupwise(K, 1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
                         ] # rotation
     model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',
     model_name_list2 = ['JPDA'] #,'MHT'
@@ -80,7 +82,7 @@ if __name__ == '__main__':
                         for dataset_splited in dataset_splited_list \
                         for model_name in model_name_list1)
     
-    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name,K+1, n_assign) \
+    Parallel(n_jobs=3)(delayed(main)(seeds, dataset_splited, model, model_name,K+1, n_assign) \
                         for dataset_splited in dataset_splited_list \
                         for model_name in model_name_list2 \
                             for n_assign in n_assign_list)
