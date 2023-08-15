@@ -22,7 +22,7 @@ from fedbase.utils import assignment_func
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
-         bayes=True,num_assign=3,temperature=10.,accuracy_type='single'):
+         bayes=True,num_assign=3,temperature=10.,accuracy_type='single',cost_method='weighted'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -97,7 +97,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 if [j, assign[j]] in trained_index:
                     # return the index of [j, assign[j]] in trained_index
                     index = trained_index.index([j, assign[j]])
-                    nodes[j] = trained_nodes[index]
+                    nodes[j] = copy.deepcopy(trained_nodes[index])
                 else:
                     # local update
                     if t == 0 or not bayes:
@@ -112,17 +112,22 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             cluster_models_temp = copy.deepcopy(cluster_models)
             cluster_models_lambda_temp = copy.deepcopy(cluster_models_lambda)
             for k in range(K):
-                cost_k = sum([cost_matrix[j][k] for j in range(num_nodes) if nodes[j].label == k])
-                # think about the exception
-                if sum([nodes[j].label == k for j in range(num_nodes)]) == 0:
-                    cost_k = 0
-                cost_ks.append(cost_k)
+                
                 # for this assignment, aggregate the assigned nodes' models
                 assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
                 if assign_ls == []:
                     continue
                 weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
                 weight_ls = torch.tensor(weight_ls)
+                if sum([nodes[j].label == k for j in range(num_nodes)]) == 0:
+                    cost_k = 0
+                else:
+                    if cost_method == 'weighted':
+                        cost_k = sum([cost_matrix[j][k] * weight_ls[i] for i,j in enumerate(assign_ls)])
+                    elif cost_method == 'average':
+                        cost_k = sum([cost_matrix[j][k] for j in assign_ls]) / len(assign_ls)
+                # cost_k = sum([cost_matrix[j][k] for j in range(num_nodes) if nodes[j].label == k])
+                cost_ks.append(cost_k)
                 if not bayes:
                     model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
                     server.distribute([nodes[i].model for i in assign_ls], model_k)
@@ -198,7 +203,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
         # log
-        log(os.path.basename(__file__)[:-3] +add_(K) + add_(num_assign) + add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] +add_(K) + add_(num_assign)+ add_(cost_method) + add_(split_para), nodes, server)
         return cluster_models, assign
     else:
         if not finetune_steps:

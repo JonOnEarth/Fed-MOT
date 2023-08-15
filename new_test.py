@@ -31,7 +31,7 @@ device = torch.device('mps' if torch.cuda.is_available() else 'cpu')
 K = 2
 H = 2
 
-def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None):
+def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_method=None):
     np.random.seed(seeds)
     # dataset_splited, model = dataset_splited_model[0], dataset_splited_model[1]
     if model_name == 'FedAvg':
@@ -45,13 +45,13 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None):
     elif model_name == 'GNN':
         GNN.run(dataset_splited,batch_size,K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, assign_method='ifca',bayes=True, device = device)
     elif model_name == 'JPDA':
-        jpda.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,device=device)
+        jpda.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,device=device, cost_method=cost_method)
     elif model_name == 'MHT':
-        mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device)
+        mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method)
 
 if __name__ == '__main__':
     dataset = 'mnist'
-    seeds = 0
+    seeds = 1989 # 0,2020
     if dataset == 'mnist':
         model = CNNMnist
     elif dataset == 'femnist':
@@ -61,33 +61,35 @@ if __name__ == '__main__':
     elif dataset == 'cifar10':
         model = CNNCifar
 
-    K = 4
-    num_nodes = 20
-    n_assign_list = [2,4,6]
+    K = 2
+    num_nodes = 6
+    n_assign_list = [1,3,6]
     noise = 'rotation'
     dataset_splited_list = [
         # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
         # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class')#,\
-        # data_process(dataset).split_dataset(num_nodes, 2, 'class'),\
+        # data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
         # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
-        data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 3, 'class', noise) ,\
-        data_process(dataset).split_dataset_groupwise(K, 1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
+        data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
+        data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
                         ] # rotation
     model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',
     model_name_list2 = ['JPDA'] #,'MHT'
-
-    Parallel(n_jobs=8)(delayed(main)(seeds, dataset_splited, model, model_name, K+1) \
-                        for dataset_splited in dataset_splited_list \
-                        for model_name in model_name_list1)
+    cost_methods = ['weighted','average']
+    K_set = K
+    # Parallel(n_jobs=4)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list1)
     
-    Parallel(n_jobs=3)(delayed(main)(seeds, dataset_splited, model, model_name,K+1, n_assign) \
+    Parallel(n_jobs=4)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign,cost_method) \
                         for dataset_splited in dataset_splited_list \
                         for model_name in model_name_list2 \
-                            for n_assign in n_assign_list)
+                            for n_assign in n_assign_list \
+                            for cost_method in cost_methods)
 
     
-    # main(seeds, dataset_splited_list[-1], model, model_name_list2[0], K=K, n_assign=n_assign_list[1])
+    # main(seeds, dataset_splited_list[-1], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],cost_method=cost_methods[0])
     # main(seeds, dataset_splited_list[-1], model, model_name_list2[1], K=K, n_assign=n_assign_list[1])
 
