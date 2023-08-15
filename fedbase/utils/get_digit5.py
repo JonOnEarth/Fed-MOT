@@ -3,7 +3,7 @@ import os
 import random
 import torchvision.transforms as transforms
 import torch.utils.data as data
-from utils.dataset_utils import split_data, save_file
+# from utils.dataset_utils import split_data, save_file
 from os import path
 from scipy.io import loadmat
 from PIL import Image
@@ -190,7 +190,7 @@ data_path = "Digit5/"
 dir_path = "Digit5/"
 
 # Allocate data to usersz``
-def generate_Digit5(dir_path, client_group=1):
+def generate_Digit5(dir_path, domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=1, method='iid',alpha=0.5):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
         
@@ -213,7 +213,7 @@ def generate_Digit5(dir_path, client_group=1):
         os.system(f'unzip {root}/Digit5.zip -d {root}')
 
     X, y = [], []
-    domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn']
+    # domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn']
     for d in domains:
         train_loader, test_loader = digit5_dataset_read(root, d)
 
@@ -249,25 +249,25 @@ def generate_Digit5(dir_path, client_group=1):
 
     train_data_groups, test_data_groups = split_data(X, y)
     # split train data and test data into different clients
-    train_data, test_data = group_split(train_data_groups, test_data_groups, client_group, method='iid')
+    train_data, test_data = group_split(train_data_groups, test_data_groups, client_group, method=method, alpha=alpha)
 
     # save_file(config_path, train_path, test_path, train_data, test_data, num_clients, max(labelss), 
     #     statistic, None, None, None)
     
     return train_data, test_data
 
-def group_split(train_datasets, test_datasets, num_clients, method='iid', alpha=None):
+def group_split(train_datasets, test_datasets, num_clients_per_group, method='iid', alpha=None):
     # train_targets = get_targets(train_datasets[0])
     train_splited = []
     test_splited = []
     for i in range(len(train_datasets)):
-        train_tmp, test_tmp = split_dataset(num_clients, alpha, method, train_dataset=train_datasets[i], test_dataset=test_datasets[i])
+        train_tmp, test_tmp, _ = split_dataset(num_clients_per_group, alpha, method, train_dataset=train_datasets[i], test_dataset=test_datasets[i])
         train_splited += train_tmp
         test_splited += test_tmp
     #plot
     # labels = torch.unique(train_targets)
     
-    return train_splited, test_splited
+    return train_splited, test_splited, 'digit5' +'_'+ str(num_clients_per_group)+'_'+ str(alpha)+'_'+ str(method)
 
 def split_dataset(num_nodes, alpha, method='dirichlet', train_dataset = None, test_dataset = None, plot_show = False):
     # train_dataset = self.train_dataset if train_dataset is None else train_dataset
@@ -343,7 +343,26 @@ def split_dataset(num_nodes, alpha, method='dirichlet', train_dataset = None, te
             # print(min([len(i) for i in train_splited]))
             # print(min([len(i) for i in test_splited]))
             
-            return train_splited, test_splited #, self.dataset_name +'_'+ str(num_nodes)+'_'+ str(alpha)+'_'+ str(method)+'_'+ str(noise)
+            return train_splited, test_splited, 'digit5' +'_'+ str(num_nodes)+'_'+ str(alpha)+'_'+ str(method)
+        
+def split_data(X, y):
+    # Split dataset
+    train_data, test_data = [], []
+    num_samples = {'train':[], 'test':[]}
 
+    for i in range(len(y)):
+        X_train, X_test, y_train, y_test = train_test_split(
+            X[i], y[i], train_size=train_size, shuffle=True)
+
+        train_data.append({'x': X_train, 'y': y_train})
+        num_samples['train'].append(len(y_train))
+        test_data.append({'x': X_test, 'y': y_test})
+        num_samples['test'].append(len(y_test))
+
+    print("Total number of samples:", sum(num_samples['train'] + num_samples['test']))
+    print("The number of train samples:", num_samples['train'])
+    print("The number of test samples:", num_samples['test'])
+    print()
+    del X, y
 if __name__ == "__main__":
     generate_Digit5(dir_path)

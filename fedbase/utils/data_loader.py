@@ -100,7 +100,7 @@ class data_process:
         # # print labels
         # print(' '.join('%5s' % classes[labels[j]] for j in range(batch_size)))
 
-    def split_dataset(self, num_nodes, alpha, method='dirichlet',noise=None, var=None, train_dataset = None, test_dataset = None, plot_show = False):
+    def split_dataset(self, num_nodes, alpha, method='dirichlet',noise=None, train_dataset = None, test_dataset = None, plot_show = False):
         train_dataset = self.train_dataset if train_dataset is None else train_dataset
         test_dataset = self.test_dataset if test_dataset is None else test_dataset
         train_targets, test_targets = get_targets(train_dataset), get_targets(test_dataset)
@@ -129,10 +129,16 @@ class data_process:
                             test_splited[i][j] = (img, label)
                 elif noise == 'Gaussian':
                     for i in range(len(train_splited)):
+                        if i==0:
+                            continue
+                        var = 0.1  * i
                         for j,(img, label) in enumerate(train_splited[i]):
                             img = torch.tensor(random_noise(img, mode='gaussian', mean=0., var=var, clip=True))
                             train_splited[i][j] = (img, label)
                     for i in range(len(test_splited)):
+                        if i==0:
+                            continue
+                        var = 0.1  * i
                         for j,(img, label) in enumerate(test_splited[i]):
                             img = torch.tensor(random_noise(img, mode='gaussian', mean=0., var=var, clip=True))
                             test_splited[i][j] = (img, label)
@@ -209,10 +215,16 @@ class data_process:
                             test_splited[i][j] = (img, label)
                 elif noise == 'Gaussian':
                     for i in range(len(train_splited)):
+                        if i == 0:
+                            continue
+                        var = i*0.1
                         for j,(img, label) in enumerate(train_splited[i]):
                             img = torch.tensor(random_noise(img, mode='gaussian', mean=0., var=var, clip=True))
                             train_splited[i][j] = (img, label)
                     for i in range(len(test_splited)):
+                        if i == 0:
+                            continue
+                        var = i*0.1
                         for j,(img, label) in enumerate(test_splited[i]):
                             img = torch.tensor(random_noise(img, mode='gaussian', mean=0., var=var, clip=True))
                             test_splited[i][j] = (img, label)
@@ -228,7 +240,7 @@ class data_process:
         train_splited_0, test_splited_0, _ = self.split_dataset(num0, alpha0, method0, noise=noise)
         while (min([len(test_splited_0[i]) for i in range(len(test_splited_0))]) <= len(test_dataset)/num0 * 0.3):
             # print('do it again')
-            train_splited_0, test_splited_0, _ = self.split_dataset(num0, alpha0, method0,noise=noise)
+            train_splited_0, test_splited_0, _ = self.split_dataset(num0, alpha0, method0, noise=noise)
         for i in range(num0):
             train_tmp, test_tmp, _ = self.split_dataset(num1, alpha1, method1, train_dataset=train_splited_0[i], test_dataset=test_splited_0[i])
             train_splited += train_tmp

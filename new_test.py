@@ -15,6 +15,7 @@ import torchvision.models as models
 
 from joblib import Parallel, delayed
 import argparse
+from fedbase.utils.get_digit5 import generate_Digit5
 
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
@@ -65,6 +66,7 @@ if __name__ == '__main__':
     num_nodes = 6
     n_assign_list = [1,3,6]
     noise = 'rotation'
+    dir_path = './data/Digit5'
     dataset_splited_list = [
         # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
         # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class')#,\
@@ -73,7 +75,8 @@ if __name__ == '__main__':
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
         data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
-        data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
+        data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
+        generate_Digit5(dir_path, domains=['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=2, client_group=1, method='dirichlet', alpha=10)
                         ] # rotation
     model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',
     model_name_list2 = ['JPDA'] #,'MHT'
