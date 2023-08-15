@@ -18,7 +18,6 @@ from pathlib import Path
 from collections import Counter
 import torchvision.transforms.functional as TF
 # import medmnist
-from skimage.util import random_noise
 
 class data_process:
     def __init__(self, dataset_name):
@@ -74,6 +73,9 @@ class data_process:
             self.test_dataset = ConcatDataset([self.val_dataset, self.test_dataset])
             # print(len(self.val_dataset), len(self.test_dataset))
             # print(self.train_dataset)
+        elif dataset_name == 'digit5':
+
+            
 
         sample = next(iter(self.train_dataset))
         image, label = sample
@@ -100,7 +102,7 @@ class data_process:
         # # print labels
         # print(' '.join('%5s' % classes[labels[j]] for j in range(batch_size)))
 
-    def split_dataset(self, num_nodes, alpha, method='dirichlet',noise=None, var=None, train_dataset = None, test_dataset = None, plot_show = False):
+    def split_dataset(self, num_nodes, alpha, method='dirichlet',noise=None, train_dataset = None, test_dataset = None, plot_show = False):
         train_dataset = self.train_dataset if train_dataset is None else train_dataset
         test_dataset = self.test_dataset if test_dataset is None else test_dataset
         train_targets, test_targets = get_targets(train_dataset), get_targets(test_dataset)
@@ -118,24 +120,14 @@ class data_process:
                 if noise == 'rotation':
                     for i in range(len(train_splited)):
                         # for j in range(len(train_splited[i])):
-                        for j,(img, label) in train_splited[i]:
+                        for img, label in train_splited[i]:
+                            # img_temp0 = img.permute(1, 2, 0)
+                            # plt.imshow(img_temp0[:,:,0])
                             img = TF.rotate(img, 45)
-                            train_splited[i][j] = (img, label)
                     for i in range(len(test_splited)):
                         # for j in range(len(test_splited[i])):
-                        for j,(img, label) in enumerate(test_splited[i]):
+                        for img, label in test_splited[i]:
                             img = TF.rotate(img, 45)
-                            # replace the new img to the dataset
-                            test_splited[i][j] = (img, label)
-                elif noise == 'Gaussian':
-                    for i in range(len(train_splited)):
-                        for j,(img, label) in enumerate(train_splited[i]):
-                            img = torch.tensor(random_noise(img, mode='gaussian', mean=0., var=var, clip=True))
-                            train_splited[i][j] = (img, label)
-                    for i in range(len(test_splited)):
-                        for j,(img, label) in enumerate(test_splited[i]):
-                            img = torch.tensor(random_noise(img, mode='gaussian', mean=0., var=var, clip=True))
-                            test_splited[i][j] = (img, label)
                 return train_splited, test_splited
             else:
                 labels, train_label_size = torch.unique(train_targets, return_counts=True)
@@ -198,24 +190,18 @@ class data_process:
                 if noise == 'rotation':
                     for i in range(len(train_splited)):
                         # for j in range(len(train_splited[i])):
-                        for j,(img, label) in train_splited[i]:
+                        for img, label in train_splited[i]:
+                            # img_temp0 = img.permute(1, 2, 0)
+                            # plt.imshow(img_temp0[:,:,0])
                             img = TF.rotate(img, 45)
-                            train_splited[i][j] = (img, label)
+                            # img is [1: 28: 28], change to [28: 28: 1]
+                            # img_temp = img.permute(1, 2, 0)
+                            # plt.imshow(img_temp[:,:,0])
+                            # plt.show()
                     for i in range(len(test_splited)):
                         # for j in range(len(test_splited[i])):
-                        for j,(img, label) in enumerate(test_splited[i]):
+                        for img, label in test_splited[i]:
                             img = TF.rotate(img, 45)
-                            # replace the new img to the dataset
-                            test_splited[i][j] = (img, label)
-                elif noise == 'Gaussian':
-                    for i in range(len(train_splited)):
-                        for j,(img, label) in enumerate(train_splited[i]):
-                            img = torch.tensor(random_noise(img, mode='gaussian', mean=0., var=var, clip=True))
-                            train_splited[i][j] = (img, label)
-                    for i in range(len(test_splited)):
-                        for j,(img, label) in enumerate(test_splited[i]):
-                            img = torch.tensor(random_noise(img, mode='gaussian', mean=0., var=var, clip=True))
-                            test_splited[i][j] = (img, label)
                 return train_splited, test_splited, self.dataset_name +'_'+ str(num_nodes)+'_'+ str(alpha)+'_'+ str(method)+'_'+ str(noise)
         
     def split_dataset_groupwise(self, num0, alpha0, method0, num1, alpha1, method1, noise=None, train_dataset = None, test_dataset = None, plot_show = False):
@@ -272,6 +258,32 @@ class data_process:
     #     plt.show()
 
         # return train_data_rotated
+
+def digit5_dataset_read(base_path, domain):
+    if domain == "mnist":
+        train_image, train_label, test_image, test_label = load_mnist(base_path)
+    elif domain == "mnistm":
+        train_image, train_label, test_image, test_label = load_mnist_m(base_path)
+    elif domain == "svhn":
+        train_image, train_label, test_image, test_label = load_svhn(base_path)
+    elif domain == "syn":
+        train_image, train_label, test_image, test_label = load_syn(base_path)
+    elif domain == "usps":
+        train_image, train_label, test_image, test_label = load_usps(base_path)
+    else:
+        raise NotImplementedError("Domain {} Not Implemented".format(domain))
+    # define the transform function
+    transform = transforms.Compose([
+        transforms.Resize(32),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+    # raise train and test data loader
+    train_dataset = Digit5Dataset(data=train_image, labels=train_label, transform=transform)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=len(train_dataset), shuffle=False)
+    test_dataset = Digit5Dataset(data=test_image, labels=test_label, transform=transform)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=len(test_dataset), shuffle=False)
+    return train_loader, test_loader
 
 
 def log(file_name, nodes, server, H=None,assign_method=None, bayes=None):
