@@ -76,7 +76,7 @@ if __name__ == '__main__':
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
         data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
         data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
-        generate_Digit5(dir_path, domains=['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=2, client_group=1, method='dirichlet', alpha=10)
+        generate_Digit5(dir_path, domains=['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=2, method='dirichlet', alpha=10)
                         ] # rotation
     model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',
     model_name_list2 = ['JPDA'] #,'MHT'
