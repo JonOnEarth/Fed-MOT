@@ -19,11 +19,11 @@ from fedbase.utils.get_digit5 import generate_Digit5
 
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
-global_rounds = 50
+global_rounds = 200
 num_nodes = 10
 local_steps = 10
 batch_size = 32
-optimizer = partial(optim.SGD,lr=0.01, momentum=0.9)
+optimizer = partial(optim.SGD,lr=0.001, momentum=0.9)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
 # device = torch.device('cuda')  # Use GPU if available
@@ -62,37 +62,37 @@ if __name__ == '__main__':
     elif dataset == 'cifar10':
         model = CNNCifar
 
-    K = 2
-    num_nodes = 6
-    n_assign_list = [1,3,6]
+    K = 4
+    num_nodes = 40
+    n_assign_list = [3,6]
     noise = 'rotation'
     dir_path = './data/Digit5'
     dataset_splited_list = [
         # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
         # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class')#,\
-        # data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
-        # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
+        data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
+        data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
         data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
         data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
         generate_Digit5(dir_path, domains=['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=2, method='dirichlet', alpha=10)
                         ] # rotation
-    model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',
+    model_name_list1 = ['Wecfl','GNN'] #'BayesFedAvg','Fesem','FedAvg',,'GNN'
     model_name_list2 = ['JPDA'] #,'MHT'
-    cost_methods = ['weighted','average']
+    # cost_methods = ['weighted'] #,'average'
     K_set = K
-    # Parallel(n_jobs=4)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
-    #                     for dataset_splited in dataset_splited_list \
-    #                     for model_name in model_name_list1)
+    Parallel(n_jobs=4)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+                        for dataset_splited in dataset_splited_list \
+                        for model_name in model_name_list1)
     
-    Parallel(n_jobs=4)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign,cost_method) \
+    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign) \
                         for dataset_splited in dataset_splited_list \
                         for model_name in model_name_list2 \
-                            for n_assign in n_assign_list \
-                            for cost_method in cost_methods)
+                            for n_assign in n_assign_list)# \
+                            # for cost_method in cost_methods)
 
     
-    # main(seeds, dataset_splited_list[-1], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],cost_method=cost_methods[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],cost_method=cost_methods[0])
     # main(seeds, dataset_splited_list[-1], model, model_name_list2[1], K=K, n_assign=n_assign_list[1])
 

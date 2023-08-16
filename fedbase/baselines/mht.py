@@ -121,19 +121,21 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                     # for this assignment, aggregate the assigned nodes' models
                     assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
                     if assign_ls == []:
+                        cost_k = 0
+                        cost_ks.append(cost_k)
                         continue
                     weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
                     weight_ls = torch.tensor(weight_ls)
                     # cost_k = sum([cost_matrix[j][k] for j in range(num_nodes) if nodes[j].label == k])
                     # if sum([nodes[j].label == k for j in range(num_nodes)]) == 0:
                     #     cost_k = 0
-                    if sum([nodes[j].label == k for j in range(num_nodes)]) == 0:
-                        cost_k = 0
-                    else:
-                        if cost_method == 'weighted':
-                            cost_k = sum([cost_matrix[j][k] * weight_ls[i] for i,j in enumerate(assign_ls)])
-                        elif cost_method == 'average':
-                            cost_k = sum([cost_matrix[j][k] for j in assign_ls]) / len(assign_ls)
+                    # if sum([nodes[j].label == k for j in range(num_nodes)]) == 0:
+                    #     cost_k = 0
+                    # else:
+                    if cost_method == 'weighted':
+                        cost_k = sum([cost_matrix[j][k] * weight_ls[i] for i,j in enumerate(assign_ls)])
+                    elif cost_method == 'average':
+                        cost_k = sum([cost_matrix[j][k] for j in assign_ls]) / len(assign_ls)
                     cost_ks.append(cost_k)
                     if not bayes:
                         model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
