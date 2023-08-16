@@ -12,7 +12,9 @@ import torch
 from torch.utils.data import DataLoader, Dataset, random_split, Subset, ChainDataset, ConcatDataset
 from fedbase.utils.tools import get_targets
 from torch._utils import _accumulate
+from sklearn.model_selection import train_test_split
 
+train_size = 0.75
 # https://github.com/FengHZ/KD3A/blob/master/datasets/DigitFive.py
 def load_mnist(base_path):
     print("load mnist")
@@ -156,6 +158,25 @@ class Digit5Dataset(data.Dataset):
 
     def __len__(self):
         return self.data.shape[0]
+    
+class CustomImageDataset(data.Dataset):
+    def __init__(self,img_data, img_labels, transform=None, target_transform=None):
+        super(CustomImageDataset, self).__init__()
+        self.data = img_data
+        self.labels = img_labels
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        img, label = self.data[idx], self.labels[idx]
+        if self.transform:
+            img = self.transform(img)
+        if self.target_transform:
+            label = self.target_transform(label)
+        return img, label
 
 def digit5_dataset_read(base_path, domain):
     if domain == "mnist":
@@ -186,11 +207,11 @@ def digit5_dataset_read(base_path, domain):
 
 random.seed(1)
 np.random.seed(1)
-data_path = "Digit5/"
-dir_path = "Digit5/"
+data_path = "data/Digit5/"
+dir_path = "data/Digit5/"
 
 # Allocate data to usersz``
-def generate_Digit5(dir_path, domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=1, method='iid',alpha=0.5):
+def generate_Digit5(domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=1, method='iid',alpha=0.5):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
         
@@ -254,20 +275,29 @@ def generate_Digit5(dir_path, domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn
     # save_file(config_path, train_path, test_path, train_data, test_data, num_clients, max(labelss), 
     #     statistic, None, None, None)
     
-    return train_data, test_data
+    return train_data, test_data, 'digit5' +'_'+ str(client_group)+'_'+ str(alpha)+'_'+ str(method)
 
 def group_split(train_datasets, test_datasets, num_clients_per_group, method='iid', alpha=None):
     # train_targets = get_targets(train_datasets[0])
     train_splited = []
     test_splited = []
     for i in range(len(train_datasets)):
-        train_tmp, test_tmp, _ = split_dataset(num_clients_per_group, alpha, method, train_dataset=train_datasets[i], test_dataset=test_datasets[i])
+        # transform = transforms.Compose([
+        #         # you can add other transformations in this list
+        #         transforms.ToTensor()
+        #     ])
+        # train_dataset = Digit5Dataset(data=train_datasets[i]['data'], labels=train_datasets[i]['labels'], transform=transform)
+        # test_dataset = Digit5Dataset(data=test_datasets[i]['data'], labels=test_datasets[i]['labels'], transform=transform)
+        train_dataset = CustomImageDataset(train_datasets[i]['data'], train_datasets[i]['labels'])
+        test_dataset = CustomImageDataset(test_datasets[i]['data'], test_datasets[i]['labels'])
+        print('Done loader!')
+        train_tmp, test_tmp, _ = split_dataset(num_clients_per_group, alpha, method, train_dataset=train_dataset, test_dataset=test_dataset)
         train_splited += train_tmp
         test_splited += test_tmp
     #plot
     # labels = torch.unique(train_targets)
     
-    return train_splited, test_splited, 'digit5' +'_'+ str(num_clients_per_group)+'_'+ str(alpha)+'_'+ str(method)
+    return train_splited, test_splited
 
 def split_dataset(num_nodes, alpha, method='dirichlet', train_dataset = None, test_dataset = None, plot_show = False):
     # train_dataset = self.train_dataset if train_dataset is None else train_dataset
@@ -343,7 +373,7 @@ def split_dataset(num_nodes, alpha, method='dirichlet', train_dataset = None, te
             # print(min([len(i) for i in train_splited]))
             # print(min([len(i) for i in test_splited]))
             
-            return train_splited, test_splited, 'digit5' +'_'+ str(num_nodes)+'_'+ str(alpha)+'_'+ str(method)
+        return train_splited, test_splited, 'digit5' +'_'+ str(num_nodes)+'_'+ str(alpha)+'_'+ str(method)
         
 def split_data(X, y):
     # Split dataset
@@ -354,9 +384,9 @@ def split_data(X, y):
         X_train, X_test, y_train, y_test = train_test_split(
             X[i], y[i], train_size=train_size, shuffle=True)
 
-        train_data.append({'x': X_train, 'y': y_train})
+        train_data.append({'data': X_train, 'labels': y_train})
         num_samples['train'].append(len(y_train))
-        test_data.append({'x': X_test, 'y': y_test})
+        test_data.append({'data': X_test, 'labels': y_test})
         num_samples['test'].append(len(y_test))
 
     print("Total number of samples:", sum(num_samples['train'] + num_samples['test']))
@@ -364,5 +394,7 @@ def split_data(X, y):
     print("The number of test samples:", num_samples['test'])
     print()
     del X, y
+    return train_data, test_data
+
 if __name__ == "__main__":
     generate_Digit5(dir_path)

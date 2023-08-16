@@ -126,10 +126,11 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 # else:
                 if cost_method == 'weighted':
                     cost_k = sum([cost_matrix[j][k] * weight_ls[i] for i,j in enumerate(assign_ls)])
+                    cost_ks.append(cost_k)
                 elif cost_method == 'average':
                     cost_k = sum([cost_matrix[j][k] for j in assign_ls]) / len(assign_ls)
                 # cost_k = sum([cost_matrix[j][k] for j in range(num_nodes) if nodes[j].label == k])
-                cost_ks.append(cost_k)
+                    cost_ks.append(cost_k)
                 if not bayes:
                     model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
                     server.distribute([nodes[i].model for i in assign_ls], model_k)

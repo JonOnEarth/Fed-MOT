@@ -118,7 +118,7 @@ class data_process:
                 if noise == 'rotation':
                     for i in range(len(train_splited)):
                         # for j in range(len(train_splited[i])):
-                        for j,(img, label) in train_splited[i]:
+                        for j,(img, label) in enumerate(train_splited[i]):
                             img = TF.rotate(img, 45)
                             train_splited[i][j] = (img, label)
                     for i in range(len(test_splited)):
@@ -204,9 +204,13 @@ class data_process:
                 if noise == 'rotation':
                     for i in range(len(train_splited)):
                         # for j in range(len(train_splited[i])):
-                        for j,(img, label) in train_splited[i]:
+                        # for j,(img, label) in enumerate(train_splited[i]):
+                        #     img = TF.rotate(img, 45)
+                        #     train_splited[i][j] = img, label
+                        for j in range(len(train_splited[i])):
+                            img, label = train_splited[i][j]
                             img = TF.rotate(img, 45)
-                            train_splited[i][j] = (img, label)
+                            train_splited[i][j] = img, label
                     for i in range(len(test_splited)):
                         # for j in range(len(test_splited[i])):
                         for j,(img, label) in enumerate(test_splited[i]):

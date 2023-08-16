@@ -59,7 +59,42 @@ class CNNFemnist(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1), x1
 
+# https://github.com/FengHZ/KD3A/blob/master/model/digit5.py
+class Digit5CNN(nn.Module):
+    def __init__(self):
+        super(Digit5CNN, self).__init__()
+        self.encoder = nn.Sequential()
+        self.encoder.add_module("conv1", nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=2))
+        self.encoder.add_module("bn1", nn.BatchNorm2d(64))
+        self.encoder.add_module("relu1", nn.ReLU())
+        self.encoder.add_module("maxpool1", nn.MaxPool2d(kernel_size=3, stride=2, padding=1, ceil_mode=False))
+        self.encoder.add_module("conv2", nn.Conv2d(64, 64, kernel_size=5, stride=1, padding=2))
+        self.encoder.add_module("bn2", nn.BatchNorm2d(64))
+        self.encoder.add_module("relu2", nn.ReLU())
+        self.encoder.add_module("maxpool2", nn.MaxPool2d(kernel_size=3, stride=2, padding=1, ceil_mode=False))
+        self.encoder.add_module("conv3", nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=2))
+        self.encoder.add_module("bn3", nn.BatchNorm2d(128))
+        self.encoder.add_module("relu3", nn.ReLU())
 
+        self.linear = nn.Sequential()
+        self.linear.add_module("fc1", nn.Linear(8192, 3072))
+        self.linear.add_module("bn4", nn.BatchNorm1d(3072))
+        self.linear.add_module("relu4", nn.ReLU())
+        self.linear.add_module("dropout", nn.Dropout())
+        self.linear.add_module("fc2", nn.Linear(3072, 2048))
+        self.linear.add_module("bn5", nn.BatchNorm1d(2048))
+        self.linear.add_module("relu5", nn.ReLU())
+
+        self.fc = nn.Linear(2048, 10)
+
+    def forward(self, x):
+        batch_size = x.size(0)
+        feature = self.encoder(x.float())
+        feature = feature.view(batch_size, -1)
+        feature = self.linear(feature)
+        out = self.fc(feature)
+        return out
+    
 class CNNFashion_Mnist(nn.Module):
     def __init__(self):
         super(CNNFashion_Mnist, self).__init__()
