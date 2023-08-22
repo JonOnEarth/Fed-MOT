@@ -19,11 +19,11 @@ from fedbase.utils.get_digit5 import generate_Digit5
 
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
-global_rounds = 200
-num_nodes = 10
+global_rounds = 20
+# num_nodes = 10
 local_steps = 10
 batch_size = 32
-optimizer = partial(optim.SGD,lr=0.001, momentum=0.9)
+optimizer = partial(optim.SGD,lr=0.01, momentum=0.9)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
 # device = torch.device('cuda')  # Use GPU if available
@@ -32,7 +32,7 @@ device = torch.device('mps' if torch.cuda.is_available() else 'cpu')
 K = 2
 H = 2
 
-def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_method='weighted'):
+def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_method='weighted',warm_up=False,warm_up_rounds=2):
     np.random.seed(seeds)
     # dataset_splited, model = dataset_splited_model[0], dataset_splited_model[1]
     if model_name == 'FedAvg':
@@ -44,11 +44,11 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
     elif model_name == 'Fesem':
         fesem.run(dataset_splited,batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, reg_lam=0.001, device = device)
     elif model_name == 'GNN':
-        GNN.run(dataset_splited,batch_size,K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, assign_method='ifca',bayes=True, device = device)
+        GNN.run(dataset_splited,batch_size,K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, assign_method='ifca',bayes=True, device = device,warm_up=warm_up)
     elif model_name == 'JPDA':
-        jpda.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,device=device, cost_method=cost_method)
+        jpda.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,device=device, cost_method=cost_method,warm_up=warm_up)
     elif model_name == 'MHT':
-        mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method)
+        mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method,warm_up=warm_up)
 
 if __name__ == '__main__':
     dataset = 'digit5'
@@ -62,10 +62,13 @@ if __name__ == '__main__':
     elif dataset == 'cifar10':
         model = CNNCifar
     elif dataset == 'digit5':
-        model = Digit5CNN
+        model = Digit5CNN # CNNDigit5
 
-    K = 5
-    num_nodes = 10 #40
+    # for Digit5
+    domains=['mnistm', 'mnist', 'usps', 'svhn','syn'] #, ,
+    client_group = 2
+    K = len(domains)
+    num_nodes = K*client_group #40
     n_assign_list = [3,6]
     noise = None #'rotation'
     # dir_path = 'data/Digit5'
@@ -78,23 +81,24 @@ if __name__ == '__main__':
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
         # data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
         # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
-        generate_Digit5(domains=['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=2, method='iid', alpha=10)
+        generate_Digit5(domains=domains, client_group=client_group, method='iid', alpha=10) 
                         ] # rotation
-    model_name_list1 = ['Wecfl','GNN'] #'BayesFedAvg','Fesem','FedAvg',,'GNN'
-    model_name_list2 = ['JPDA'] #,'MHT'
+    model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',
+    model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
     K_set = K
-    # Parallel(n_jobs=4)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+    warm_ups = [False,True]
+    # Parallel(n_jobs=3)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
     #                     for dataset_splited in dataset_splited_list \
     #                     for model_name in model_name_list1)
     
-    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign) \
+    # Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign) \
     #                     for dataset_splited in dataset_splited_list \
     #                     for model_name in model_name_list2 \
-    #                         for n_assign in n_assign_list)# \
-                            # for cost_method in cost_methods)
+    #                         for n_assign in n_assign_list \
+    #                         for warm_up in warm_ups)
 
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0])
+    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
     # main(seeds, dataset_splited_list[-1], model, model_name_list2[1], K=K, n_assign=n_assign_list[1])
 

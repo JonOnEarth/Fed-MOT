@@ -15,6 +15,8 @@ from torch._utils import _accumulate
 from sklearn.model_selection import train_test_split
 
 train_size = 0.75
+train_sample_size = 800 #25000
+test_sample_size = 200 #9000
 # https://github.com/FengHZ/KD3A/blob/master/datasets/DigitFive.py
 def load_mnist(base_path):
     print("load mnist")
@@ -36,10 +38,10 @@ def load_mnist(base_path):
     train_label = train_label[inds]
     test_label = np.argmax(mnist_labels_test, axis=1)
 
-    mnist_train = mnist_train[:25000]
-    train_label = train_label[:25000]
-    mnist_test = mnist_test[:9000]
-    test_label = test_label[:9000]
+    mnist_train = mnist_train[:train_sample_size]
+    train_label = train_label[:train_sample_size]
+    mnist_test = mnist_test[:test_sample_size]
+    test_label = test_label[:test_sample_size]
     return mnist_train, train_label, mnist_test, test_label
 
 
@@ -59,10 +61,10 @@ def load_mnist_m(base_path):
     mnistm_train = mnistm_train[inds]
     train_label = train_label[inds]
     test_label = np.argmax(mnistm_labels_test, axis=1)
-    mnistm_train = mnistm_train[:25000]
-    train_label = train_label[:25000]
-    mnistm_test = mnistm_test[:9000]
-    test_label = test_label[:9000]
+    mnistm_train = mnistm_train[:train_sample_size]
+    train_label = train_label[:train_sample_size]
+    mnistm_test = mnistm_test[:test_sample_size]
+    test_label = test_label[:test_sample_size]
     return mnistm_train, train_label, mnistm_test, test_label
 
 
@@ -79,10 +81,10 @@ def load_svhn(base_path):
     inds = np.random.permutation(svhn_train.shape[0])
     svhn_train = svhn_train[inds]
     train_label = train_label[inds]
-    svhn_train = svhn_train[:25000]
-    train_label = train_label[:25000]
-    svhn_test = svhn_test[:9000]
-    test_label = test_label[:9000]
+    svhn_train = svhn_train[:train_sample_size]
+    train_label = train_label[:train_sample_size]
+    svhn_test = svhn_test[:test_sample_size]
+    test_label = test_label[:test_sample_size]
     train_label[train_label == 10] = 0
     test_label[test_label == 10] = 0
     return svhn_train, train_label, svhn_test, test_label
@@ -98,10 +100,10 @@ def load_syn(base_path):
     syn_test = syn_test.transpose(3, 2, 0, 1).astype(np.float32)
     train_label = syn_train_data["y"].reshape(-1)
     test_label = syn_test_data["y"].reshape(-1)
-    syn_train = syn_train[:25000]
-    syn_test = syn_test[:9000]
-    train_label = train_label[:25000]
-    test_label = test_label[:9000]
+    syn_train = syn_train[:train_sample_size]
+    syn_test = syn_test[:test_sample_size]
+    train_label = train_label[:train_sample_size]
+    test_label = test_label[:test_sample_size]
     train_label[train_label == 10] = 0
     test_label[test_label == 10] = 0
     return syn_train, train_label, syn_test, test_label
@@ -124,8 +126,8 @@ def load_usps(base_path):
     usps_train = np.concatenate([usps_train, usps_train, usps_train], 1)
     usps_train = np.tile(usps_train, (4, 1, 1, 1))
     train_label = np.tile(train_label,4)
-    usps_train = usps_train[:25000]
-    train_label = train_label[:25000]
+    usps_train = usps_train[:train_sample_size]
+    train_label = train_label[:train_sample_size]
     usps_test = np.concatenate([usps_test, usps_test, usps_test], 1)
     return usps_train, train_label, usps_test, test_label
 
@@ -193,7 +195,7 @@ def digit5_dataset_read(base_path, domain):
         raise NotImplementedError("Domain {} Not Implemented".format(domain))
     # define the transform function
     transform = transforms.Compose([
-        transforms.Resize(32),
+        transforms.Resize(28), #32
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])

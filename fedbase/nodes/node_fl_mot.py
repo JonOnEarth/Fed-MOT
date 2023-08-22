@@ -78,9 +78,10 @@ class node():
         # self.model.zero_grad(set_to_none=True)
         self.optim.zero_grad()
         # forward + backward + optimize
-        outputs = self.model(inputs)
-        # optim
-        loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
+        with torch.cuda.amp.autocast():
+            outputs = self.model(inputs)
+            # optim
+            loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
         loss.backward()
 
         # calculate accumulate gradients
@@ -133,10 +134,11 @@ class node():
         labels = labels.to(self.device, dtype = torch.long)
 
         self.optim.zero_grad()
-        outputs = self.model(inputs)
-        # ce_loss = self.criterion(output, target)
-        ce_loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
-        csd_loss = self.get_csd_loss(self.model, new_mu, new_lambda) if csd_importance > 0 else 0
+        with torch.cuda.amp.autocast():
+            outputs = self.model(inputs)
+            # ce_loss = self.criterion(output, target)
+            ce_loss = self.objective(outputs, F.one_hot(labels, outputs.shape[1]).float())
+            csd_loss = self.get_csd_loss(self.model, new_mu, new_lambda) if csd_importance > 0 else 0
         ce_loss.backward(retain_graph=True)
 
         for name, param in self.model.named_parameters():
@@ -184,7 +186,7 @@ class node():
                 labels = labels.to(self.device, dtype = torch.long)
                 # forward
                 outputs = model(inputs)
-                train_loss += self.objective(outputs, labels)
+                train_loss += float(self.objective(outputs, labels))
                 i+=1
                 if i>=10:
                     break
@@ -225,7 +227,7 @@ class node():
                     model_res.to(self.device)
                     outputs = model_res(inputs) + self.model(inputs)
                 else:
-                    outputs = self.model(inputs) 
+                    outputs = self.model(inputs)
                 # print(outputs.data.dtype)
                 _, predicted = torch.max(outputs.data, 1)
                 predict_ts = torch.cat([predict_ts, predicted], 0)
@@ -270,7 +272,7 @@ class node():
                         outputs = model(inputs)
                         _, predicted = torch.max(outputs.data, 1)
                         out_hard.append(predicted)       
-                    predicted = torch.tensor([mode([out_hard[i][j] for i in range(len(out_hard))]) for j in range(len(out_hard[0]))]).to(self.device)
+                    predicted = torch.as_tensor([mode([out_hard[i][j] for i in range(len(out_hard))]) for j in range(len(out_hard[0]))]).to(self.device)
                     outputs = model_list[m](inputs)
                 predict_ts = torch.cat([predict_ts, predicted], 0)
                 label_ts = torch.cat([label_ts, labels], 0)
@@ -303,7 +305,7 @@ class node():
                         outputs = model(inputs)
                         _, predicted = torch.max(outputs.data, 1)
                         out_hard.append(predicted)       
-                    predicted = torch.tensor([mode([out_hard[i][j] for i in range(len(out_hard))]) for j in range(len(out_hard[0]))]).to(self.device)
+                    predicted = torch.as_tensor([mode([out_hard[i][j] for i in range(len(out_hard))]) for j in range(len(out_hard[0]))]).to(self.device)
                 elif voting == 'product_weighted':
                     out = torch.zeros(self.model(inputs).data.shape).to(self.device)
                     for i in range(len(model_list)):

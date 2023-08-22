@@ -22,7 +22,8 @@ from fedbase.utils import assignment_func
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
-         bayes=True,num_assign=3,temperature=1.,accuracy_type='single',cost_method='weighted'):
+         bayes=True,num_assign=3,temperature=1.,accuracy_type='single',cost_method='weighted',\
+            warm_up=False, warm_up_rounds=2):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -61,16 +62,30 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     cluster_models = [model().to(device) for i in range(K)]
     cluster_models_lambda = [model_lambda for i in range(K)]
 
+    # warm up
+    if warm_up==True:
+        for warm_up_round in range(warm_up_rounds):
+            print('-------------------Warm up round %d start-------------------' % (warm_up_round))
+            for j in range(num_nodes):
+                nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step)) 
+            server.weighted_clustering(nodes, list(range(num_nodes)), K)
+            for k in range(K):
+                assign_ls = [i for i in list(range(num_nodes)) if nodes[i].label==k]
+                if assign_ls == []:
+                    continue
+                weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
+                weight_ls = torch.tensor(weight_ls)
+                
+                model_k = server.aggregate([nodes[i].model for i in assign_ls], weight_ls)
+                server.distribute([nodes[i].model for i in assign_ls], model_k)
+                cluster_models[k].load_state_dict(model_k)
+        print('-------------------Warm up round %d end-------------------' % (warm_up_round))
+    
     server_accuracy = torch.zeros(global_rounds)
     # train!
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))
-        # if assign_method== 'ifca' and warm_up==True and t <= warm_up_steps:
-        #     assign_method = 'wecfl'
-        # else:
-        #     assign_method = assign_method_copy
-        
-        # if assign_method == 'ifca':
+
         # local update
         assignment = [[] for i in range(K)]
         cost_matrix = torch.zeros((num_nodes, K))
@@ -97,7 +112,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                 if [j, assign[j]] in trained_index:
                     # return the index of [j, assign[j]] in trained_index
                     index = trained_index.index([j, assign[j]])
-                    nodes[j] = copy.deepcopy(trained_nodes[index])
+                    nodes[j] = copy.copy(trained_nodes[index]) #copy.deepcopy(trained_nodes[index])
                 else:
                     # local update
                     if t == 0 or not bayes:
@@ -109,8 +124,8 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             
             # calculate the cost of the assignment for each cluster
             cost_ks = []
-            cluster_models_temp = copy.deepcopy(cluster_models)
-            cluster_models_lambda_temp = copy.deepcopy(cluster_models_lambda)
+            cluster_models_temp = cluster_models #copy.deepcopy(cluster_models)
+            cluster_models_lambda_temp = cluster_models_lambda #copy.deepcopy(cluster_models_lambda)
             for k in range(K):
                 
                 # for this assignment, aggregate the assigned nodes' models
@@ -120,7 +135,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                     cost_ks.append(cost_k)
                     continue
                 weight_ls = [nodes[i].data_size/sum([nodes[i].data_size for i in assign_ls]) for i in assign_ls]
-                weight_ls = torch.tensor(weight_ls)
+                weight_ls = torch.as_tensor(weight_ls)
                 # if sum([nodes[j].label == k for j in range(num_nodes)]) == 0:
                 #     cost_k = 0
                 # else:
@@ -136,6 +151,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                     server.distribute([nodes[i].model for i in assign_ls], model_k)
                     cluster_models_temp[k].load_state_dict(model_k)
                 else:
+                    torch.cuda.empty_cache()
                     model_k, model_lambda_k,_ = server.aggregate_bayes([nodes[i].model for i in assign_ls], [nodes[i].model_lambda for i in assign_ls], weight_ls)
                     server.distribute([nodes[i].model for i in assign_ls], model_k)
                     server.distribute_lambda([nodes[i].model_lambda for i in assign_ls], model_lambda_k)
@@ -169,7 +185,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             #     server.acc(nodes, weight_list)
 
         # aggregate the cluster models of all assignments
-        cost_ks_assignments = torch.tensor(cost_ks_assignments)
+        cost_ks_assignments = torch.as_tensor(cost_ks_assignments)
         weight_assignments = torch.exp(-cost_ks_assignments*temperature)
         # normalize by column
         weight_assignments = weight_assignments/weight_assignments.sum(0)
@@ -178,6 +194,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             if weight_assignments[:,k].sum() == 0:
                 continue
             if not bayes:
+                torch.cuda.empty_cache()
                 model_k2 = server.aggregate([cluster_models_assignments[a][k].to(device) for a in range(len(assignments))],\
                                     weight_assignments[:,k])
                 # server.distribute([cluster_models_assignments[a][k].to(device) for a in range(len(assignments))], model_k)
@@ -197,16 +214,17 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         #     server.acc(nodes, weight_list)
         # elif accuracy_type == 'ensemble':
         #     print('test ensemble\n')
-        print('test ensemble of each round \n')
+        print(f'test ensemble of round {t} \n')
         for j in range(num_nodes):
             nodes[j].local_ensemble_test(cluster_models, voting = 'max')
         server.acc(nodes, weight_list)
-
+        del cost_ks_assignments, weight_assignments, cluster_models_assignments,\
+              cluster_models_lambda_assignments, nodes_associations
 
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
         # log
-        log(os.path.basename(__file__)[:-3] +add_(K) + add_(num_assign)+ add_(cost_method) + add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] +add_(K) + add_(num_assign)+ add_(warm_up) + add_(split_para), nodes, server)
         return cluster_models, assign
     else:
         if not finetune_steps:
