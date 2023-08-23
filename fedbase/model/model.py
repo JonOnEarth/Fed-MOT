@@ -113,6 +113,28 @@ class Digit5CNN(nn.Module):
         feature = self.linear(feature)
         out = self.fc(feature)
         return out
+    
+# https://github.com/FengHZ/KD3A/blob/master/model/amazon.py
+class AmazonMLP(nn.Module):
+    def __init__(self):
+        super(AmazonMLP, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Linear(5000, 1000), 
+            # nn.BatchNorm1d(1000), 
+            nn.ReLU(), 
+            nn.Linear(1000, 500), 
+            # nn.BatchNorm1d(500), 
+            nn.ReLU(),
+            nn.Linear(500, 100), 
+            # nn.BatchNorm1d(100), 
+            nn.ReLU()
+        )
+        self.fc = nn.Linear(100, 2)
+
+    def forward(self, x):
+        out = self.encoder(x)
+        out = self.fc(out)
+        return out
 
 class CNNFashion_Mnist(nn.Module):
     def __init__(self):

@@ -16,7 +16,7 @@ import torchvision.models as models
 from joblib import Parallel, delayed
 import argparse
 from fedbase.utils.get_digit5 import generate_Digit5
-
+from fedbase.utils.get_amazon_review import generate_AmazonReview
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
 global_rounds = 20
@@ -51,7 +51,7 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method,warm_up=warm_up)
 
 if __name__ == '__main__':
-    dataset = 'digit5'
+    dataset = 'amazon' #'digit5'
     seeds = 1989 # 0,2020
     if dataset == 'mnist':
         model = CNNMnist
@@ -63,12 +63,22 @@ if __name__ == '__main__':
         model = CNNCifar
     elif dataset == 'digit5':
         model = Digit5CNN # CNNDigit5
+    elif dataset == 'amazon':
+        model = AmazonMLP
 
-    # for Digit5
-    domains=['mnistm', 'mnist', 'usps', 'svhn','syn'] #, ,
     client_group = 2
-    K = len(domains)
-    num_nodes = K*client_group #40
+    if dataset == 'digit5':
+        # for Digit5
+        domains=['mnistm', 'mnist', 'usps', 'svhn','syn'] #,
+        K = len(domains)
+        num_nodes = K*client_group #40
+    elif dataset == 'amazon':
+        K = 4
+        num_nodes = K*client_group 
+    else:
+        K = 4
+        num_nodes = 20 #40
+
     n_assign_list = [3,6]
     noise = None #'rotation'
     # dir_path = 'data/Digit5'
@@ -81,7 +91,8 @@ if __name__ == '__main__':
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
         # data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
         # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
-        generate_Digit5(domains=domains, client_group=client_group, method='iid', alpha=10) 
+        # generate_Digit5(domains=domains, client_group=client_group, method='iid', alpha=10),\
+        generate_AmazonReview(client_group=client_group, method='iid', alpha=10) 
                         ] # rotation
     model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
@@ -99,6 +110,18 @@ if __name__ == '__main__':
     #                         for warm_up in warm_ups)
 
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
-    # main(seeds, dataset_splited_list[-1], model, model_name_list2[1], K=K, n_assign=n_assign_list[1])
+    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
+
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])

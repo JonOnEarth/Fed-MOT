@@ -224,19 +224,20 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         # elif accuracy_type == 'ensemble':
         #     print('test ensemble\n')
         print(f'test ensemble of each round {t}\n')
-        # assignment = [[] for i in range(K)]
-        # cost_matrix = torch.zeros((num_nodes, K))
-        # for j in range(num_nodes):
-        #     for k in range(0, K):
-        #         # build the cost matrix
-        #         loss = nodes[j].local_train_loss(cluster_models_assignments_hypothesis[0][k])
-        #         cost_matrix[j][k] = loss
-        # assignments = assignment_func.get_num_assignments(cost_matrix.numpy(), 1)
-        # server.clustering['label'].append(assignments[0])
+        assignment = [[] for i in range(K)]
+        cost_matrix = torch.zeros((num_nodes, K))
+        for j in range(num_nodes):
+            for k in range(0, K):
+                # build the cost matrix
+                loss = nodes[j].local_train_loss(cluster_models_assignments_hypothesis[0][k])
+                cost_matrix[j][k] = loss
+        assignments = assignment_func.get_num_assignments(cost_matrix.numpy(), 1)
+        server.clustering['label'].append(assignments[0])
         for j in range(num_nodes):
             # server.distribute([nodes[j].model for j in assign_ls], cluster_models_assignments_hypothesis[0][j])
-            nodes[j].local_ensemble_test(cluster_models_assignments_hypothesis[0], voting = 'max')
-            # nodes[j].local_test()
+            nodes[j].assign_model(cluster_models_assignments_hypothesis[0][assignments[0][j]])
+            # nodes[j].local_ensemble_test(cluster_models_assignments_hypothesis[0], voting = 'max')
+            nodes[j].local_test()
         server.acc(nodes, weight_list)
 
         del cluster_models_assignments_hypothesis_new, cluster_models_lambda_assignments_hypothesis_new,\
