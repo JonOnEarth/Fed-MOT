@@ -5,6 +5,7 @@ import random
 from scipy.sparse import coo_matrix
 from os import path
 from fedbase.utils.data_utils import split_data, group_split, split_dataset
+import torch
 
 
 # https://github.com/FengHZ/KD3A/blob/master/datasets/AmazonReview.py
@@ -76,8 +77,11 @@ def generate_AmazonReview(client_group=1, method='iid',alpha=0.5):
     # for client in range(num_clients):
     #     for i in np.unique(y[client]):
     #         statistic[client].append((int(i), int(sum(y[client]==i))))
-
+    # turn X and y to pytorch tensor
+    for i in range(len(X)):
+        X[i] = torch.from_numpy(X[i])
+        y[i] = torch.from_numpy(y[i])
     train_data_groups, test_data_groups = split_data(X, y, train_size=train_size)
     train_data, test_data = group_split(train_data_groups, test_data_groups, client_group, method=method, alpha=alpha)
     
-    return train_data, test_data, 'digit5' +'_'+ str(client_group)+'_'+ str(alpha)+'_'+ str(method)
+    return train_data, test_data, 'amazon' +'_'+ str(client_group)+'_'+ str(alpha)+'_'+ str(method)

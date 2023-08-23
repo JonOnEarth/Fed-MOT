@@ -48,7 +48,7 @@ def group_split(train_datasets, test_datasets, num_clients_per_group, method='ii
         train_dataset = CustomImageDataset(train_datasets[i]['data'], train_datasets[i]['labels'])
         test_dataset = CustomImageDataset(test_datasets[i]['data'], test_datasets[i]['labels'])
         print('Done loader!')
-        train_tmp, test_tmp, _ = split_dataset(num_clients_per_group, alpha, method, train_dataset=train_dataset, test_dataset=test_dataset)
+        train_tmp, test_tmp = split_dataset(num_clients_per_group, alpha, method, train_dataset=train_dataset, test_dataset=test_dataset)
         train_splited += train_tmp
         test_splited += test_tmp
     #plot
@@ -130,7 +130,7 @@ def split_dataset(num_nodes, alpha, method='dirichlet', train_dataset = None, te
             # print(min([len(i) for i in train_splited]))
             # print(min([len(i) for i in test_splited]))
             
-        return train_splited, test_splited, 'digit5' +'_'+ str(num_nodes)+'_'+ str(alpha)+'_'+ str(method)
+        return train_splited, test_splited
         
 def split_data(X, y,train_size=0.75):
     # Split dataset
