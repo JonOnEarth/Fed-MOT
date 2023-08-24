@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:1
+#SBATCH --time=8:00:00
+#SBATCH --job-name=gpu_run
+#SBATCH --mem=32GB
+#SBATCH --ntasks=1
+#SBATCH --output=myjob.%j.out
+#SBATCH --error=myjob.%j.err
+python new_test.py

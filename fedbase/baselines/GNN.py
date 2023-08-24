@@ -71,14 +71,15 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         
         if assign_method == 'ifca':
             # local update
-            assignment = [[] for i in range(K)]
+            # assignment = [[] for i in range(K)]
+            assignment = [None for j in range(num_nodes)]
             for j in range(num_nodes):
                 m = 0
                 for k in range(1, K):
                     # print(nodes[i].local_train_loss(cluster_models[m]), nodes[i].local_train_loss(cluster_models[k]))
                     if nodes[j].local_train_loss(cluster_models[m])>=nodes[j].local_train_loss(cluster_models[k]):
                         m = k
-                assignment[m].append(j)
+                assignment[j] = m
                 nodes[j].label = m
                 nodes[j].assign_model(cluster_models[m])
                 nodes[j].assign_model_lambda(cluster_models_lambda[m])

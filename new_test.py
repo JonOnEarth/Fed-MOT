@@ -19,15 +19,15 @@ from fedbase.utils.get_digit5 import generate_Digit5
 from fedbase.utils.get_amazon_review import generate_AmazonReview
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
-global_rounds = 20
+global_rounds = 100
 # num_nodes = 10
 local_steps = 10
 batch_size = 32
-optimizer = partial(optim.SGD,lr=0.01, momentum=0.9)
+optimizer = partial(optim.SGD,lr=0.002, momentum=0.9)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
 # device = torch.device('cuda')  # Use GPU if available
-device = torch.device('mps' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # print(device)
 K = 2
 H = 2
@@ -94,14 +94,14 @@ if __name__ == '__main__':
         # generate_Digit5(domains=domains, client_group=client_group, method='iid', alpha=10),\
         generate_AmazonReview(client_group=client_group, method='iid', alpha=10) 
                         ] # rotation
-    model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',
+    model_name_list1 = ['GNN'] #'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl',
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
     K_set = K
     warm_ups = [False,True]
-    # Parallel(n_jobs=3)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
-    #                     for dataset_splited in dataset_splited_list \
-    #                     for model_name in model_name_list1)
+    Parallel(n_jobs=3)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+                        for dataset_splited in dataset_splited_list \
+                        for model_name in model_name_list1)
     
     # Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign) \
     #                     for dataset_splited in dataset_splited_list \
