@@ -51,7 +51,7 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method,warm_up=warm_up)
 
 if __name__ == '__main__':
-    dataset = 'amazon' #'digit5'
+    dataset = 'digit5' #'amazon' 
     seeds = 1989 # 0,2020
     if dataset == 'mnist':
         model = CNNMnist
@@ -91,10 +91,10 @@ if __name__ == '__main__':
         # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
         # data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
         # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
-        # generate_Digit5(domains=domains, client_group=client_group, method='iid', alpha=10),\
-        generate_AmazonReview(client_group=client_group, method='iid', alpha=10) 
+        generate_Digit5(domains=domains, client_group=client_group, method='iid', alpha=10),\
+        # generate_AmazonReview(client_group=client_group, method='iid', alpha=10) 
                         ] # rotation
-    model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',
+    model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl',
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
     K_set = K

@@ -1,0 +1,222 @@
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: /home/wu.p/.conda/envs/pytorch_env
+
+  added / updated specs: 
+    - pytorch
+    - pytorch-cuda=11.8
+    - scikit-image
+    - torchaudio
+    - torchvision
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    setuptools-68.0.0          |   py38h06a4308_0         1.0 MB
+    importlib-metadata-6.0.0   |   py38h06a4308_0          37 KB
+    yaml-0.2.5                 |       h7b6447c_0          87 KB
+    mkl-2020.2                 |              256       213.9 MB
+    mkl_fft-1.3.0              |   py38h54f3939_0         195 KB
+    numpy-1.19.2               |   py38h54aff64_0          21 KB
+    torchaudio-2.0.2           |         py38_cpu         7.3 MB  pytorch
+    gmpy2-2.1.2                |   py38heeb90bb_0         213 KB
+    requests-2.31.0            |   py38h06a4308_0          92 KB
+    torchtriton-2.0.0          |             py38        62.6 MB  pytorch
+    pysocks-1.7.1              |   py38h06a4308_0          31 KB
+    locket-1.0.0               |   py38h06a4308_0          11 KB
+    zipp-3.11.0                |   py38h06a4308_0          18 KB
+    certifi-2023.7.22          |   py38h06a4308_0         155 KB
+    typing_extensions-4.7.1    |   py38h06a4308_0          56 KB
+    python-3.8.13              |       h12debd9_0        22.7 MB
+    pywavelets-1.3.0           |   py38h7f8727e_0         4.4 MB
+    mkl_random-1.1.1           |   py38h0573a6f_0         394 KB
+    fsspec-2023.4.0            |   py38h06a4308_0         213 KB
+    mpmath-1.3.0               |   py38h06a4308_0         972 KB
+    fastcache-1.1.0            |   py38h7b6447c_0          37 KB
+    pillow-9.0.1               |   py38h22f2fdc_0         716 KB
+    cytoolz-0.11.0             |   py38h7b6447c_0         390 KB
+    tifffile-2020.10.1         |   py38hdd07704_2         264 KB
+    cffi-1.15.0                |   py38hd667e15_1         226 KB
+    pytorch-mutex-1.0          |              cpu           3 KB  pytorch
+    pip-23.2.1                 |   py38h06a4308_0         2.5 MB
+    mkl-service-2.3.0          |   py38he904b0f_0          68 KB
+    networkx-3.1               |   py38h06a4308_0         2.8 MB
+    urllib3-1.26.16            |   py38h06a4308_0         182 KB
+    scipy-1.6.2                |   py38h91f5cce_0        20.1 MB
+    brotlipy-0.7.0             |py38h27cfd23_1003         349 KB
+    libgomp-11.2.0             |       h1234567_1         560 KB
+    idna-3.4                   |   py38h06a4308_0         109 KB
+    cloudpickle-2.2.1          |   py38h06a4308_0          40 KB
+    partd-1.2.0                |     pyhd3eb1b0_1          18 KB
+    torchvision-0.15.2         |         py38_cpu        33.1 MB  pytorch
+    sympy-1.5.1                |           py38_0        10.3 MB
+    markupsafe-2.1.1           |   py38h7f8727e_0          22 KB
+    imageio-2.31.1             |   py38h06a4308_0         497 KB
+    filelock-3.9.0             |   py38h06a4308_0          17 KB
+    wheel-0.38.4               |   py38h06a4308_0          58 KB
+    cryptography-41.0.2        |   py38h774aba0_0         2.0 MB
+    numpy-base-1.19.2          |   py38hfa32c7d_0         5.3 MB
+    packaging-23.0             |   py38h06a4308_0          64 KB
+    toolz-0.12.0               |   py38h06a4308_0          99 KB
+    pyopenssl-23.2.0           |   py38h06a4308_0          92 KB
+    pytorch-2.0.1              |      py3.8_cpu_0        86.0 MB  pytorch
+    intel-openmp-2020.2        |              254         947 KB
+    scikit-image-0.19.2        |   py38h51133e4_0        11.8 MB
+    _openmp_mutex-5.1          |            1_gnu          20 KB
+    pyyaml-6.0                 |   py38h7f8727e_1         180 KB
+    jinja2-3.1.2               |   py38h06a4308_0         207 KB
+    click-8.0.4                |   py38h06a4308_0         150 KB
+    dask-core-2023.4.1         |   py38h06a4308_0         2.0 MB
+    ------------------------------------------------------------
+                                           Total:       495.7 MB
+
+The following NEW packages will be INSTALLED:
+
+    _openmp_mutex:      5.1-1_gnu                                 
+    click:              8.0.4-py38h06a4308_0                      
+    cloudpickle:        2.2.1-py38h06a4308_0                      
+    cytoolz:            0.11.0-py38h7b6447c_0                     
+    dask-core:          2023.4.1-py38h06a4308_0                   
+    fastcache:          1.1.0-py38h7b6447c_0                      
+    fsspec:             2023.4.0-py38h06a4308_0                   
+    imageio:            2.31.1-py38h06a4308_0                     
+    importlib-metadata: 6.0.0-py38h06a4308_0                      
+    libgfortran-ng:     7.3.0-hdf63c60_0                          
+    libgomp:            11.2.0-h1234567_1                         
+    locket:             1.0.0-py38h06a4308_0                      
+    packaging:          23.0-py38h06a4308_0                       
+    partd:              1.2.0-pyhd3eb1b0_1                        
+    pywavelets:         1.3.0-py38h7f8727e_0                      
+    pyyaml:             6.0-py38h7f8727e_1                        
+    scikit-image:       0.19.2-py38h51133e4_0                     
+    scipy:              1.6.2-py38h91f5cce_0                      
+    tifffile:           2020.10.1-py38hdd07704_2                  
+    toolz:              0.12.0-py38h06a4308_0                     
+    yaml:               0.2.5-h7b6447c_0                          
+    zipp:               3.11.0-py38h06a4308_0                     
+
+The following packages will be UPDATED:
+
+    brotlipy:           0.7.0-py310h7f8727e_1002                   --> 0.7.0-py38h27cfd23_1003         
+    certifi:            2023.7.22-py310h06a4308_0                  --> 2023.7.22-py38h06a4308_0        
+    cffi:               1.15.0-py310hd667e15_1                     --> 1.15.0-py38hd667e15_1           
+    charset-normalizer: 2.0.4-pyhd3eb1b0_0                         --> 2.0.4-pyhd3eb1b0_0              
+    cryptography:       41.0.2-py310h774aba0_0                     --> 41.0.2-py38h774aba0_0           
+    filelock:           3.9.0-py310h06a4308_0                      --> 3.9.0-py38h06a4308_0            
+    gmpy2:              2.1.2-py310heeb90bb_0                      --> 2.1.2-py38heeb90bb_0            
+    idna:               3.4-py310h06a4308_0                        --> 3.4-py38h06a4308_0              
+    jinja2:             3.1.2-py310h06a4308_0                      --> 3.1.2-py38h06a4308_0            
+    markupsafe:         2.1.1-py310h7f8727e_0                      --> 2.1.1-py38h7f8727e_0            
+    mpmath:             1.3.0-py310h06a4308_0                      --> 1.3.0-py38h06a4308_0            
+    networkx:           3.1-py310h06a4308_0                        --> 3.1-py38h06a4308_0              
+    pillow:             9.0.1-py310h22f2fdc_0                      --> 9.0.1-py38h22f2fdc_0            
+    pip:                23.2.1-py310h06a4308_0                     --> 23.2.1-py38h06a4308_0           
+    pycparser:          2.21-pyhd3eb1b0_0                          --> 2.21-pyhd3eb1b0_0               
+    pyopenssl:          23.2.0-py310h06a4308_0                     --> 23.2.0-py38h06a4308_0           
+    pysocks:            1.7.1-py310h06a4308_0                      --> 1.7.1-py38h06a4308_0            
+    pytorch:            2.0.1-py3.10_cuda11.8_cudnn8.7.0_0 pytorch --> 2.0.1-py3.8_cpu_0        pytorch
+    requests:           2.31.0-py310h06a4308_0                     --> 2.31.0-py38h06a4308_0           
+    setuptools:         68.0.0-py310h06a4308_0                     --> 68.0.0-py38h06a4308_0           
+    six:                1.16.0-pyhd3eb1b0_1                        --> 1.16.0-pyhd3eb1b0_1             
+    torchaudio:         2.0.2-py310_cu118                  pytorch --> 2.0.2-py38_cpu           pytorch
+    torchtriton:        2.0.0-py310                        pytorch --> 2.0.0-py38               pytorch
+    torchvision:        0.15.2-py310_cu118                 pytorch --> 0.15.2-py38_cpu          pytorch
+    typing_extensions:  4.7.1-py310h06a4308_0                      --> 4.7.1-py38h06a4308_0            
+    urllib3:            1.26.16-py310h06a4308_0                    --> 1.26.16-py38h06a4308_0          
+    wheel:              0.38.4-py310h06a4308_0                     --> 0.38.4-py38h06a4308_0           
+
+The following packages will be DOWNGRADED:
+
+    intel-openmp:       2021.4.0-h06a4308_3561                     --> 2020.2-254                      
+    mkl:                2021.4.0-h06a4308_640                      --> 2020.2-256                      
+    mkl-service:        2.4.0-py310h7f8727e_0                      --> 2.3.0-py38he904b0f_0            
+    mkl_fft:            1.3.1-py310hd6ae3a3_0                      --> 1.3.0-py38h54f3939_0            
+    mkl_random:         1.2.2-py310h00e6091_0                      --> 1.1.1-py38h0573a6f_0            
+    numpy:              1.22.3-py310hfa59a62_0                     --> 1.19.2-py38h54aff64_0           
+    numpy-base:         1.22.3-py310h9585f30_0                     --> 1.19.2-py38hfa32c7d_0           
+    python:             3.10.4-h12debd9_0                          --> 3.8.13-h12debd9_0               
+    pytorch-mutex:      1.0-cuda                           pytorch --> 1.0-cpu                  pytorch
+    sympy:              1.11.1-py310h06a4308_0                     --> 1.5.1-py38_0                    
+
+
+Downloading and Extracting Packages
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done
+Collecting joblib
+  Obtaining dependency information for joblib from https://files.pythonhosted.org/packages/10/40/d551139c85db202f1f384ba8bcf96aca2f329440a844f924c8a0040b6d02/joblib-1.3.2-py3-none-any.whl.metadata
+  Using cached joblib-1.3.2-py3-none-any.whl.metadata (5.4 kB)
+Collecting matplotlib
+  Obtaining dependency information for matplotlib from https://files.pythonhosted.org/packages/b4/c2/f74e0deb26379aead0956a6ecf9acd4587debba0c7abe4bd8fe53fe04ec2/matplotlib-3.7.2-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl.metadata
+  Downloading matplotlib-3.7.2-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl.metadata (5.6 kB)
+Requirement already satisfied: numpy in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (1.19.2)
+Collecting pandas
+  Obtaining dependency information for pandas from https://files.pythonhosted.org/packages/f8/7f/5b047effafbdd34e52c9e2d7e44f729a0655efafb22198c45cf692cdc157/pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata
+  Downloading pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (18 kB)
+Collecting scikit-learn
+  Obtaining dependency information for scikit-learn from https://files.pythonhosted.org/packages/bf/15/d1b649fc7685d11b806b4546a5438191fb2ad761de70da95ff676189dcec/scikit_learn-1.3.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata
+  Downloading scikit_learn-1.3.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (11 kB)
+Requirement already satisfied: scipy in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (1.6.2)
+Collecting seaborn
+  Using cached seaborn-0.12.2-py3-none-any.whl (293 kB)
+Collecting contourpy>=1.0.1 (from matplotlib)
+  Obtaining dependency information for contourpy>=1.0.1 from https://files.pythonhosted.org/packages/32/c8/aa9e87941002150b1a8e7087e48da1c76290268b9fdfa3034a98a5806198/contourpy-1.1.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata
+  Downloading contourpy-1.1.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.7 kB)
+Collecting cycler>=0.10 (from matplotlib)
+  Using cached cycler-0.11.0-py3-none-any.whl (6.4 kB)
+Collecting fonttools>=4.22.0 (from matplotlib)
+  Obtaining dependency information for fonttools>=4.22.0 from https://files.pythonhosted.org/packages/91/f1/2379b341206a6e7e12f9d7c406ea03f0e0386eafa7913a47d8cc931cacf4/fonttools-4.42.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata
+  Downloading fonttools-4.42.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (150 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 151.0/151.0 kB 5.3 MB/s eta 0:00:00
+Collecting kiwisolver>=1.0.1 (from matplotlib)
+  Obtaining dependency information for kiwisolver>=1.0.1 from https://files.pythonhosted.org/packages/d2/55/7021ffcc8cb26a520bb051aa0a3d08daf200cde945e5863d5768161e2d3d/kiwisolver-1.4.5-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl.metadata
+  Downloading kiwisolver-1.4.5-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl.metadata (6.4 kB)
+Collecting numpy
+  Obtaining dependency information for numpy from https://files.pythonhosted.org/packages/98/5d/5738903efe0ecb73e51eb44feafba32bdba2081263d40c5043568ff60faf/numpy-1.24.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata
+  Downloading numpy-1.24.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.6 kB)
+Requirement already satisfied: packaging>=20.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (23.0)
+Requirement already satisfied: pillow>=6.2.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (9.0.1)
+Collecting pyparsing<3.1,>=2.3.1 (from matplotlib)
+  Using cached pyparsing-3.0.9-py3-none-any.whl (98 kB)
+Collecting python-dateutil>=2.7 (from matplotlib)
+  Using cached python_dateutil-2.8.2-py2.py3-none-any.whl (247 kB)
+Collecting importlib-resources>=3.2.0 (from matplotlib)
+  Obtaining dependency information for importlib-resources>=3.2.0 from https://files.pythonhosted.org/packages/25/d4/592f53ce2f8dde8be5720851bd0ab71cc2e76c55978e4163ef1ab7e389bb/importlib_resources-6.0.1-py3-none-any.whl.metadata
+  Downloading importlib_resources-6.0.1-py3-none-any.whl.metadata (4.0 kB)
+Collecting pytz>=2020.1 (from pandas)
+  Using cached pytz-2023.3-py2.py3-none-any.whl (502 kB)
+Collecting tzdata>=2022.1 (from pandas)
+  Using cached tzdata-2023.3-py2.py3-none-any.whl (341 kB)
+Collecting threadpoolctl>=2.0.0 (from scikit-learn)
+  Obtaining dependency information for threadpoolctl>=2.0.0 from https://files.pythonhosted.org/packages/81/12/fd4dea011af9d69e1cad05c75f3f7202cdcbeac9b712eea58ca779a72865/threadpoolctl-3.2.0-py3-none-any.whl.metadata
+  Using cached threadpoolctl-3.2.0-py3-none-any.whl.metadata (10.0 kB)
+Collecting numpy
+  Downloading numpy-1.22.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (16.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.9/16.9 MB 47.7 MB/s eta 0:00:00
+Requirement already satisfied: zipp>=3.1.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from importlib-resources>=3.2.0->matplotlib) (3.11.0)
+Requirement already satisfied: six>=1.5 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from python-dateutil>=2.7->matplotlib) (1.16.0)
+Using cached joblib-1.3.2-py3-none-any.whl (302 kB)
+Downloading matplotlib-3.7.2-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 48.9 MB/s eta 0:00:00
+Downloading pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.4/12.4 MB 57.5 MB/s eta 0:00:00
+Downloading scikit_learn-1.3.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (11.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.1/11.1 MB 41.7 MB/s eta 0:00:00
+Downloading contourpy-1.1.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (300 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 300.4/300.4 kB 7.4 MB/s eta 0:00:00
+Downloading fonttools-4.42.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (4.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.6/4.6 MB 38.7 MB/s eta 0:00:00
+Downloading importlib_resources-6.0.1-py3-none-any.whl (34 kB)
+Downloading kiwisolver-1.4.5-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl (1.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 26.6 MB/s eta 0:00:00
+Using cached threadpoolctl-3.2.0-py3-none-any.whl (15 kB)
+Installing collected packages: pytz, tzdata, threadpoolctl, python-dateutil, pyparsing, numpy, kiwisolver, joblib, importlib-resources, fonttools, cycler, pandas, contourpy, scikit-learn, matplotlib, seaborn
+  Attempting uninstall: numpy
+    Found existing installation: numpy 1.19.2
+    Uninstalling numpy-1.19.2:
+      Successfully uninstalled numpy-1.19.2
+Successfully installed contourpy-1.1.0 cycler-0.11.0 fonttools-4.42.1 importlib-resources-6.0.1 joblib-1.3.2 kiwisolver-1.4.5 matplotlib-3.7.2 numpy-1.22.4 pandas-2.0.3 pyparsing-3.0.9 python-dateutil-2.8.2 pytz-2023.3 scikit-learn-1.3.0 seaborn-0.12.2 threadpoolctl-3.2.0 tzdata-2023.3

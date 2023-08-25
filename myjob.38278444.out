@@ -1,0 +1,67 @@
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: /home/wu.p/.conda/envs/pytorch_env
+
+  added / updated specs: 
+    - pytorch
+    - pytorch-cuda=11.8
+    - scikit-image
+    - torchaudio
+    - torchvision
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    pytorch-2.0.1              |py3.8_cuda11.8_cudnn8.7.0_0        1.41 GB  pytorch
+    torchaudio-2.0.2           |       py38_cu118         7.5 MB  pytorch
+    torchvision-0.15.2         |       py38_cu118        38.8 MB  pytorch
+    ------------------------------------------------------------
+                                           Total:        1.45 GB
+
+The following packages will be UPDATED:
+
+    pytorch:       2.0.1-py3.8_cpu_0 pytorch --> 2.0.1-py3.8_cuda11.8_cudnn8.7.0_0 pytorch
+    pytorch-mutex: 1.0-cpu           pytorch --> 1.0-cuda                          pytorch
+    torchaudio:    2.0.2-py38_cpu    pytorch --> 2.0.2-py38_cu118                  pytorch
+    torchvision:   0.15.2-py38_cpu   pytorch --> 0.15.2-py38_cu118                 pytorch
+
+
+Downloading and Extracting Packages
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done
+Requirement already satisfied: joblib in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (1.3.2)
+Requirement already satisfied: matplotlib in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (3.7.2)
+Requirement already satisfied: numpy in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (1.22.4)
+Requirement already satisfied: pandas in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (2.0.3)
+Requirement already satisfied: scikit-learn in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (1.3.0)
+Requirement already satisfied: scipy in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (1.6.2)
+Requirement already satisfied: seaborn in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (0.12.2)
+Requirement already satisfied: contourpy>=1.0.1 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (1.1.0)
+Requirement already satisfied: cycler>=0.10 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (0.11.0)
+Requirement already satisfied: fonttools>=4.22.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (4.42.1)
+Requirement already satisfied: kiwisolver>=1.0.1 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (1.4.5)
+Requirement already satisfied: packaging>=20.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (23.0)
+Requirement already satisfied: pillow>=6.2.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (9.0.1)
+Requirement already satisfied: pyparsing<3.1,>=2.3.1 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (3.0.9)
+Requirement already satisfied: python-dateutil>=2.7 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (2.8.2)
+Requirement already satisfied: importlib-resources>=3.2.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from matplotlib) (6.0.1)
+Requirement already satisfied: pytz>=2020.1 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from pandas) (2023.3)
+Requirement already satisfied: tzdata>=2022.1 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from pandas) (2023.3)
+Requirement already satisfied: threadpoolctl>=2.0.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from scikit-learn) (3.2.0)
+Requirement already satisfied: zipp>=3.1.0 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from importlib-resources>=3.2.0->matplotlib) (3.11.0)
+Requirement already satisfied: six>=1.5 in /home/wu.p/.conda/envs/pytorch_env/lib/python3.8/site-packages (from python-dateutil>=2.7->matplotlib) (1.16.0)
+Number of labels: [2, 2, 2, 2]
+Number of clients: 4
+Total number of samples: 27677
+The number of train samples: [4848, 4189, 5760, 5958]
+The number of test samples: [1617, 1397, 1921, 1987]
+
+Done loader!
+Done loader!
+Done loader!
+Done loader!

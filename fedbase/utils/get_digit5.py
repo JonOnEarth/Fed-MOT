@@ -16,8 +16,8 @@ from sklearn.model_selection import train_test_split
 from fedbase.utils.data_utils import split_data, group_split, split_dataset
 
 train_size = 0.75
-train_sample_size = 800 #25000
-test_sample_size = 200 #9000
+train_sample_size = 25000 #800 #25000
+test_sample_size = 9000 #200 #9000
 # https://github.com/FengHZ/KD3A/blob/master/datasets/DigitFive.py
 def load_mnist(base_path):
     print("load mnist")

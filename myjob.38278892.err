@@ -1,0 +1,15 @@
+
+CondaValueError: prefix already exists: /home/wu.p/.conda/envs/pytorch_env
+
+
+
+==> WARNING: A newer version of conda exists. <==
+  current version: 4.5.4
+  latest version: 23.7.3
+
+Please update conda by running
+
+    $ conda update -n base conda
+
+
+python: can't open file 'new_test2.py': [Errno 2] No such file or directory
