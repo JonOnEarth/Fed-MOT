@@ -130,9 +130,9 @@ def generate_DomainNet(client_group=1, method='iid',alpha=0.5):
         dataset_label.extend(train_label.cpu().detach().numpy())
         dataset_label.extend(test_label.cpu().detach().numpy())
 
-        # get the number of samples in each class
-        dataset_image = dataset_image[:int(len(dataset_image)*alpha)]
-        
+        # # get the number of samples in each class
+        # dataset_image = dataset_image[:train_sample_size]
+        # dataset_label = dataset_label[:train_sample_size]
     
 
         X.append(np.array(dataset_image))
