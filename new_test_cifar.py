@@ -17,6 +17,7 @@ from joblib import Parallel, delayed
 import argparse
 from fedbase.utils.get_digit5 import generate_Digit5
 from fedbase.utils.get_amazon_review import generate_AmazonReview
+from fedbase.utils.get_domainnet import generate_DomainNet
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
 global_rounds = 100
@@ -51,7 +52,7 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method,warm_up=warm_up)
 
 if __name__ == '__main__':
-    dataset = 'digit5' #'amazon' 
+    dataset = 'cifar10' #'amazon' #'digit5'
     seeds = 1989 # 0,2020
     if dataset == 'mnist':
         model = CNNMnist
@@ -65,58 +66,69 @@ if __name__ == '__main__':
         model = Digit5CNN # CNNDigit5
     elif dataset == 'amazon':
         model = AmazonMLP
+    elif dataset == 'domainnet':
+        model = AlexNet
 
-    client_group = 2
+    client_group = 10
     if dataset == 'digit5':
         # for Digit5
         domains=['mnistm', 'mnist', 'usps', 'svhn','syn'] #,
         K = len(domains)
         num_nodes = K*client_group #40
+        dataset_splited_list = [generate_Digit5(domains=domains, client_group=client_group, method='iid', alpha=10)]
     elif dataset == 'amazon':
         K = 4
-        num_nodes = K*client_group 
+        num_nodes = K*client_group
+        dataset_splited_list = [generate_AmazonReview(client_group=client_group, method='iid', alpha=10)]
+    elif dataset == 'domainnet':
+        K = 6
+        num_nodes = K*client_group
+        dataset_splited_list = [generate_DomainNet(client_group=client_group, method='iid', alpha=10)]
     else:
         K = 4
-        num_nodes = 20 #40
-
+        num_nodes = 100 #40
+        noise = None #'rotation'
+        dataset_splited_list = [
+            # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
+            # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class'),\
+            # data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
+            # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
+            # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
+            # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
+            # data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
+            data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)]
+    
     n_assign_list = [3,6]
-    noise = None #'rotation'
-    # dir_path = 'data/Digit5'
-    dataset_splited_list = [
-        # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
-        # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class')#,\
-        # data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
-        # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
-        # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
-        # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
-        # data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
-        # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
-        generate_Digit5(domains=domains, client_group=client_group, method='iid', alpha=10),\
-        # generate_AmazonReview(client_group=client_group, method='iid', alpha=10) 
-                        ] # rotation
-    model_name_list1 = ['FedAvg','Wecfl','GNN'] #'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl',
+    
+    model_name_list0 = ['FedAvg','Wecfl']#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',
+    model_name_list1 = ['GNN']
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
     K_set = K
     warm_ups = [False,True]
-    Parallel(n_jobs=3)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
-                        for dataset_splited in dataset_splited_list \
-                        for model_name in model_name_list1)
+    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list0)
     
-    # Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign) \
+    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list1 \
+    #                         for warm_up in warm_ups)
+
+    # Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign, warm_up) \
     #                     for dataset_splited in dataset_splited_list \
     #                     for model_name in model_name_list2 \
     #                         for n_assign in n_assign_list \
     #                         for warm_up in warm_ups)
 
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
 
     main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     

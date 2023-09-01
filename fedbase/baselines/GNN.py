@@ -138,7 +138,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
         # log
-        log(os.path.basename(__file__)[:-3] + add_(assign_method)+add_(K) + add_(reg_lam) + add_(warm_up), nodes, server)
+        log(os.path.basename(__file__)[:-3] + add_(assign_method)+add_(K) + add_(reg_lam) + add_(warm_up)+ add_(split_para), nodes, server)
         return cluster_models, assign
     else:
         if not finetune_steps:

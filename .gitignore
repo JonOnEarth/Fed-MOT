@@ -141,3 +141,5 @@ dmypy.json
 .pyre/
 *.json
 fedbase/.DS_Store
+*.err
+*.out
