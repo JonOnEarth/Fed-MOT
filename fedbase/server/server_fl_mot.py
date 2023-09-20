@@ -7,7 +7,8 @@ import matplotlib as mpl
 from pandas.plotting import parallel_coordinates
 import copy
 import random
-
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
 
 class server_class():
     def __init__(self, device):
@@ -254,3 +255,119 @@ class server_class():
         if idex.dim() == 0:
             idex = idex.unsqueeze(0)
         return idex[:left_num] if idex[:left_num].dim() == 1 else idex[:left_num].squeeze(1)
+
+    def fuzzy_clustering(self, model_list, K, xii=0.9, sigma=10, type='cosine', weight_list=None):
+        # model_list is a list of models
+        # return the kmeans result of the model_list
+        # get the parameters of the model_list
+        # type: local, samples, cosine, distance, equal
+        X = []
+        for model in model_list:
+            para = []
+            for name, param in model.named_parameters():
+                para.append(torch.flatten(param.cpu()).detach())
+            X.append(torch.concatenate(para))
+        
+        if K == len(model_list):
+            labels = range(K)
+            if type == 'local':
+                new_model_list = model_list
+            else:
+                similarity_matrix= torch.zeros(K,K)
+                for i in range(K):
+                    for j in range(K):
+                        # if i != j:
+                        similarity_matrix[i,j] = self.get_weights(X[i],X[j],type=type,sigma=sigma,weight=weight_list[j])
+                xi = torch.zeros(K,K)
+                for i in range(K):
+                    if type == 'cosine' or type == 'distance':
+                        if xii:
+                            similarity_matrix[i,i] = 0
+                            for j in range(K):
+                                xi[i,j] = (1-xii)* similarity_matrix[i,j]/torch.sum(similarity_matrix[i,:])
+                            xi[i,i] = xii
+                        else:
+                            xi[i,:] = similarity_matrix[i,:]/torch.sum(similarity_matrix[i,:])
+                    elif type == 'samples' or type== 'equal':
+                        for j in range(K):
+                            xi[i,j] = weight_list[j]/torch.sum(torch.Tensor(weight_list))
+
+                new_model_list = []
+
+                for i in range(K):
+                    # cluster_model = copy.deepcopy(model_list[i])
+                    # for name, param in model_list[0].named_parameters():
+                    #     cluster_model.state_dict()[name] = torch.zeros(param.shape)
+                    #     for j in range(K):
+                    #         cluster_model.state_dict()[name] += model_list[j].state_dict()[name]*xi[i,j]
+                    # new_model_list.append(cluster_model)
+                    new_param = {}
+                    with torch.no_grad():
+                        for name, param in model_list[i].named_parameters():
+                            new_param[name] = param.data.zero_()
+                            for w, idx in zip(xi[i], range(len(model_list))):
+                                new_param[name] += w * model_list[idx].state_dict()[name].to(self.device)
+                    self.distribute([model_list[i]], new_param)
+                    new_model_list.append(model_list[i])
+
+        elif K < len(model_list):
+            # Apply fuzzy c-means clustering
+            cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+                X, K, 2, error=0.005, maxiter=1000, init=None
+            )
+            # Predict cluster membership for each data point
+            labels = np.argmax(u, axis=0)
+            new_model_list = []
+            # cntr include the center of each cluster
+            # how to make cntr like the model_list
+            for i in range(K):
+                pass
+
+        return new_model_list, labels
+
+            
+    def get_weights(self, x,y, type='cosine',sigma=1, weight=None):
+        if type == 'cosine':
+            similarity = torch.exp(sigma*torch.cosine_similarity(x,y,dim=0))
+        elif type == 'distance':
+            similarity = torch.exp(-sigma*torch.norm(x-y))
+        elif type == 'equal':
+            similarity = 1
+        elif type == 'samples':
+            similarity = weight
+        else: 
+            raise ValueError('type should be cosine or distance')
+        return similarity
+
+    def aggregate_amp(self, model_list, xii=0.5, sigma=10, type='cosine', weight_list=None):
+        new_model_list = []
+        X = []
+        for model in model_list:
+            para = []
+            for name, param in model.named_parameters():
+                para.append(torch.flatten(param.cpu()).detach())
+            X.append(torch.cat(para))
+
+        for c in range(len(model_list)):
+            mu = copy.deepcopy(model_list[c])
+            for param in mu.parameters():
+                param.data.zero_()
+
+            similarity = torch.zeros(len(model_list))
+            for j, mw in enumerate(model_list):
+                similarity[j] = self.get_weights(X[c],X[j],type=type,sigma=sigma,weight=weight_list[j])
+
+            if xii:
+                similarity[c] = 0
+                similarity = similarity/torch.sum(similarity)
+                xi = (1-xii)* similarity
+                xi[c] = xii
+            else:
+                xi = similarity/torch.sum(similarity)
+
+            for j, mw in enumerate(model_list):
+                for param, param_j in zip(mu.parameters(), mw.parameters()):
+                    param.data += xi[j]*param_j.data
+            new_model_list.append(mu)
+            labels = range(len(model_list))
+        return new_model_list, labels

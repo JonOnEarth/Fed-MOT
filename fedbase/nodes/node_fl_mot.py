@@ -93,6 +93,8 @@ class node():
 
         self.optim.step()
         # self.train_steps+=1
+
+        # print('after', self.objective(self.model(inputs), labels))
         
     # for fedprox and ditto
     def train_single_step_fedprox(self, inputs, labels, reg_lam = None, reg_model = None):
@@ -104,7 +106,6 @@ class node():
         self.optim.zero_grad()
         # forward + backward + optimize
         outputs = self.model(inputs)
-        # optim
         if reg_lam:
             reg_model.to(self.device)
             reg = torch.square(torch.norm(torch.cat(tuple([torch.flatten(self.model.state_dict()[k] - reg_model.state_dict()[k])\
