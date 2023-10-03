@@ -52,7 +52,7 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method,warm_up=warm_up)
 
 if __name__ == '__main__':
-    dataset = 'fashion_mnist' #'amazon' #'digit5'
+    dataset = 'cifar10' #'amazon' #'digit5'
     seeds = 1989 # 0,2020
     if dataset == 'mnist':
         model = CNNMnist
@@ -106,14 +106,14 @@ if __name__ == '__main__':
     # cost_methods = ['weighted'] #,'average'
     K_set = K
     warm_ups = [False,True]
-    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
-                        for dataset_splited in dataset_splited_list \
-                        for model_name in model_name_list0)
+    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list0)
     
-    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
-                        for dataset_splited in dataset_splited_list \
-                        for model_name in model_name_list1 \
-                            for warm_up in warm_ups)
+    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list1 \
+    #                         for warm_up in warm_ups)
 
     # Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign, warm_up) \
     #                     for dataset_splited in dataset_splited_list \
@@ -122,18 +122,18 @@ if __name__ == '__main__':
     #                         for warm_up in warm_ups)
 
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     
     main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])

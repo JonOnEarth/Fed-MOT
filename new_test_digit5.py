@@ -69,7 +69,7 @@ if __name__ == '__main__':
     elif dataset == 'domainnet':
         model = AlexNet
 
-    client_group = 10
+    client_group = 2
     if dataset == 'digit5':
         # for Digit5
         domains=['mnistm', 'mnist', 'usps', 'svhn','syn'] #,
@@ -106,9 +106,9 @@ if __name__ == '__main__':
     # cost_methods = ['weighted'] #,'average'
     K_set = K
     warm_ups = [False,True]
-    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
-                        for dataset_splited in dataset_splited_list \
-                        for model_name in model_name_list0)
+    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list0)
     
     Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
                         for dataset_splited in dataset_splited_list \
@@ -122,17 +122,17 @@ if __name__ == '__main__':
     #                         for warm_up in warm_ups)
 
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
     main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 

@@ -86,7 +86,7 @@ if __name__ == '__main__':
         dataset_splited_list = [generate_DomainNet(client_group=client_group, method='iid', alpha=10)]
     else:
         K = 4
-        num_nodes = 100 #40
+        num_nodes = 40 #100
         noise = None #'rotation'
         dataset_splited_list = [
             # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
@@ -130,9 +130,9 @@ if __name__ == '__main__':
 
     # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
 
-    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
     # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 

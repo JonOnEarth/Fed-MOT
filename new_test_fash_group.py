@@ -92,12 +92,11 @@ if __name__ == '__main__':
             # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
             # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class'),\
             # data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
-            data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet')
+            # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
             # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
             # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
             # data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
-            # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
-            ]
+            data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)]
     
     n_assign_list = [3,6]
     
@@ -113,8 +112,8 @@ if __name__ == '__main__':
     
     # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
     #                     for dataset_splited in dataset_splited_list \
-    #                     for model_name in model_name_list1 \
-    #                         for warm_up in warm_ups)
+                        # for model_name in model_name_list1 \
+                        #     for warm_up in warm_ups)
 
     # Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign, warm_up) \
     #                     for dataset_splited in dataset_splited_list \
@@ -135,6 +134,6 @@ if __name__ == '__main__':
     
     # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
-    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
