@@ -20,11 +20,12 @@ from fedbase.utils.get_amazon_review import generate_AmazonReview
 from fedbase.utils.get_domainnet import generate_DomainNet
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
-global_rounds = 100
+global_rounds = 50
 # num_nodes = 10
 local_steps = 10
-batch_size = 32
-optimizer = partial(optim.SGD,lr=0.005, momentum=0.9)
+batch_size = 64 # 32
+# optimizer = partial(optim.SGD,lr=0.005, momentum=0.9)
+optimizer = partial(optim.Adam,lr=0.001, betas=(0.9, 0.999), weight_decay=0.0001)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
 # device = torch.device('cuda')  # Use GPU if available
@@ -50,9 +51,13 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         jpda.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,device=device, cost_method=cost_method,warm_up=warm_up)
     elif model_name == 'MHT':
         mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method,warm_up=warm_up)
+    elif model_name == 'FedAMP':
+        fedamp.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device)
+    elif model_name == 'central':
+        central.run(dataset_splited, batch_size, model, nn.CrossEntropyLoss, optimizer, global_rounds, device = device)
 
 if __name__ == '__main__':
-    dataset = 'cifar10' #'amazon' #'digit5'
+    dataset = 'jammer' #'amazon' #'digit5', 'jammer'
     seeds = 1989 # 0,2020
     if dataset == 'mnist':
         model = CNNMnist
@@ -68,6 +73,8 @@ if __name__ == '__main__':
         model = AmazonMLP
     elif dataset == 'domainnet':
         model = AlexNet
+    elif dataset == 'jammer':
+        model = CNNJammer
 
     client_group = 10
     if dataset == 'digit5':
@@ -85,35 +92,39 @@ if __name__ == '__main__':
         num_nodes = K*client_group
         dataset_splited_list = [generate_DomainNet(client_group=client_group, method='iid', alpha=10)]
     else:
-        K = 4
-        num_nodes = 40 #40
+        num_nodes = 20 #4
+        K = num_nodes 
         noise = None #'rotation'
         dataset_splited_list = [
             # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
             # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class'),\
             # data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
-            # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
+            data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet')
             # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
             # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
             # data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
-            data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)]
-    
+            # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)
+        ]
     n_assign_list = [3,6]
     
-    model_name_list0 = ['FedAvg','Wecfl']#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',
+    model_name_list0 = ['FedAvg', 'FedAMP',]#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl'
     model_name_list1 = ['GNN']
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
     K_set = K
     warm_ups = [False,True]
-    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
-    #                     for dataset_splited in dataset_splited_list \
-    #                     for model_name in model_name_list0)
-    
-    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
+
+    # centrailized methods
+    central.run(data_process(dataset), batch_size, model, nn.CrossEntropyLoss, optimizer, global_rounds, device = device)
+
+    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
                         for dataset_splited in dataset_splited_list \
-                        for model_name in model_name_list1 \
-                            for warm_up in warm_ups)
+                        for model_name in model_name_list0)
+    
+    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list1 \
+    #                         for warm_up in warm_ups)
 
     # Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign, warm_up) \
     #                     for dataset_splited in dataset_splited_list \
@@ -130,9 +141,9 @@ if __name__ == '__main__':
 
     # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
 
-    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
-    
     # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
     # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 

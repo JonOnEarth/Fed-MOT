@@ -85,10 +85,10 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             # server.distribute([nodes[i].model for i in range(num_nodes) if assign_labels[i] == k], cluster_models[k])
         # 3. accuracy evaluation
         for j in range(num_nodes):
-            nodes[j].local_test()
-        server.acc(nodes, weight_list)
+            nodes[j].local_test_conf()
+        server.acc_conf(nodes, weight_list)
         # delete the cluster_models
         del cluster_models
     # log
-    log(os.path.basename(__file__)[:-3] +add_(K) + add_(reg_lam) + add_(split_para), nodes, server)
+    log(os.path.basename(__file__)[:-3] + add_(reg_lam) + add_(split_para), nodes, server)
 

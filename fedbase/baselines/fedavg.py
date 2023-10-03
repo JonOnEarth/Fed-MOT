@@ -1,7 +1,9 @@
 from fedbase.utils.data_loader import data_process, log
 from fedbase.utils.tools import add_
-from fedbase.nodes.node import node
-from fedbase.server.server import server_class
+# from fedbase.nodes.node import node
+from fedbase.nodes.node_fl_mot import node
+# from fedbase.server.server import server_class
+from fedbase.server.server_fl_mot import server_class
 import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
@@ -50,8 +52,10 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         server.distribute([nodes[i].model for i in range(num_nodes)])
         # test accuracy
         for j in range(num_nodes):
-            nodes[j].local_test()
-        server.acc(nodes, weight_list)
+        #     nodes[j].local_test()
+        # server.acc(nodes, weight_list)
+            nodes[j].local_test_conf()
+        server.acc_conf(nodes, weight_list)
 
     if not finetune:
         # log
@@ -64,8 +68,10 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         # fine tune
         for j in range(num_nodes):
             nodes[j].local_update_steps(finetune_steps, partial(nodes[j].train_single_step))
-            nodes[j].local_test()
-        server.acc(nodes, weight_list)
+        #     nodes[j].local_test()
+        # server.acc(nodes, weight_list)
+            nodes[j].local_test_conf()
+        server.acc_conf(nodes, weight_list)
         # log
         log(os.path.basename(__file__)[:-3] + add_('finetune') + add_(split_para), nodes, server)
         return [nodes[i].model for i in range(num_nodes)]

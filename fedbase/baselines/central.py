@@ -5,11 +5,17 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import os
+import numpy as np
+from functools import partial
+
 
 
 def run(dataset, batch_size, model, objective, optimizer, global_rounds, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
     dt = dataset
     trainset,testset = dt.train_dataset, dt.test_dataset
+    # use part of the dataset
+    # trainset = torch.utils.data.Subset(trainset, range(0, 5000))
+    # testset = torch.utils.data.Subset(testset, range(0, 2000))
     trainloader = DataLoader(trainset, batch_size=batch_size,
                                           shuffle=True)
     testloader = DataLoader(testset, batch_size=batch_size,
@@ -23,11 +29,15 @@ def run(dataset, batch_size, model, objective, optimizer, global_rounds, device 
     nodes0.assign_optim(optimizer(nodes0.model.parameters()))
 
     print('-------------------start-------------------')
+    confusion_matrixs = []
     for i in range(global_rounds):
-        nodes0.local_update_epochs(1)
-        nodes0.local_test()
+        nodes0.local_update_epochs(1,partial(nodes0.train_single_step))
+        # nodes0.local_update_steps(1, partial(nodes0.train_single_step))
+        confusion_matrixs.append(nodes0.local_test())
 
     # log
     log(os.path.basename(__file__)[:-3]+ add_(dt.dataset_name), [nodes0], server={})
+    # save confusion_matrixs to file, confusion matrix is numpy array
+    np.save(os.path.basename(__file__)[:-3]+ add_(dt.dataset_name)+'_confusion_matrixs.npy', confusion_matrixs)
 
     return nodes0.model

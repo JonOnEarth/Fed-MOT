@@ -259,6 +259,7 @@ def generate_Digit5(domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client
 
     # save_file(config_path, train_path, test_path, train_data, test_data, num_clients, max(labelss), 
     #     statistic, None, None, None)
+
     
     return train_data, test_data, 'digit5' +'_'+ str(client_group)+'_'+ str(alpha)+'_'+ str(method)
 

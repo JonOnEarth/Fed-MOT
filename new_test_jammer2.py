@@ -20,11 +20,12 @@ from fedbase.utils.get_amazon_review import generate_AmazonReview
 from fedbase.utils.get_domainnet import generate_DomainNet
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
-global_rounds = 100
+global_rounds = 50
 # num_nodes = 10
 local_steps = 10
-batch_size = 32
-optimizer = partial(optim.SGD,lr=0.005, momentum=0.9)
+batch_size = 64 # 32
+# optimizer = partial(optim.SGD,lr=0.005, momentum=0.9)
+optimizer = partial(optim.Adam,lr=0.001, betas=(0.9, 0.999), weight_decay=0.0001)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
 # device = torch.device('cuda')  # Use GPU if available
@@ -52,9 +53,11 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method,warm_up=warm_up)
     elif model_name == 'FedAMP':
         fedamp.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device)
+    elif model_name == 'central':
+        central.run(dataset_splited, batch_size, model, nn.CrossEntropyLoss, optimizer, global_rounds, device = device)
 
 if __name__ == '__main__':
-    dataset = 'fashion_mnist' #'amazon' #'digit5'
+    dataset = 'jammer' #'amazon' #'digit5', 'jammer'
     seeds = 1989 # 0,2020
     if dataset == 'mnist':
         model = CNNMnist
@@ -70,6 +73,8 @@ if __name__ == '__main__':
         model = AmazonMLP
     elif dataset == 'domainnet':
         model = AlexNet
+    elif dataset == 'jammer':
+        model = CNNJammer
 
     client_group = 10
     if dataset == 'digit5':
@@ -102,12 +107,16 @@ if __name__ == '__main__':
         ]
     n_assign_list = [3,6]
     
-    model_name_list0 = ['FedAMP']#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl'
+    model_name_list0 = ['FedAvg', 'FedAMP',]#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl'
     model_name_list1 = ['GNN']
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
     K_set = K
     warm_ups = [False,True]
+
+    # centrailized methods
+    # central.run(data_process(dataset), batch_size, model, nn.CrossEntropyLoss, optimizer, global_rounds, device = device)
+
     Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
                         for dataset_splited in dataset_splited_list \
                         for model_name in model_name_list0)

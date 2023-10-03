@@ -74,6 +74,27 @@ class data_process:
             self.test_dataset = ConcatDataset([self.val_dataset, self.test_dataset])
             # print(len(self.val_dataset), len(self.test_dataset))
             # print(self.train_dataset)
+        elif dataset_name == 'jammer':
+            transform = transforms.Compose([
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            self.train_dataset = datasets.ImageFolder(
+                dir+dataset_name+'/Image_training_database', transform=transform)
+            self.test_dataset = datasets.ImageFolder(
+                dir+dataset_name+'/Image_validation_database', transform=transform)
+            # shuffle the dataset
+            total_size = len(self.train_dataset)
+            indices = list(range(total_size))
+            np.random.shuffle(indices)
+            self.train_dataset = Subset(self.train_dataset, indices)
+            total_size_test = len(self.test_dataset)
+            indices_test = list(range(total_size_test))
+            np.random.shuffle(indices_test)
+            self.test_dataset = Subset(self.test_dataset, indices_test)
+            # print(len(self.train_dataset))
+
+
 
         sample = next(iter(self.train_dataset))
         image, label = sample
@@ -296,6 +317,7 @@ def log(file_name, nodes, server, H=None,assign_method=None, bayes=None):
     log['node'] = {}
     for i in range(len(nodes)):
         log['node'][str(i)] = list(nodes[i].test_metrics)
+        # log['node_confusion_matrix'] = list(nodes[i].con_mats)
     try:
         log['server'] = list(server.test_metrics)
         log['best_assignment'] = list(server.test_metrics_best)
@@ -303,6 +325,13 @@ def log(file_name, nodes, server, H=None,assign_method=None, bayes=None):
         log['assign_method'] = str(assign_method)
         log['bayes'] = str(bayes)
         log['H'] = str(H)
+        # log['confusion_matrix'] = list(server.con_mats)
+        # con_mats is a numpy array, can not be saved in json,how to save it?
+        # transfer con_mats to a format can be saved in json
+        log['confusion_matrix'] = []
+        for i in range(len(server.con_mats)):
+            log['confusion_matrix'].append(server.con_mats[i].tolist())
+
     except:
         print('No server')
     # pd.to_pickle(log, local_file)

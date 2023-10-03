@@ -7,6 +7,8 @@ from fedbase.utils.tools import unpack_args
 from functools import partial
 from statistics import mode
 import torch.nn.functional as F
+from sklearn.metrics import confusion_matrix
+
 
 class node():
     def __init__(self, id, device):
@@ -325,10 +327,13 @@ class node():
                 label_ts = torch.cat([label_ts, labels], 0)
         acc = accuracy_score(label_ts.cpu(), predict_ts.cpu())
         macro_f1 = f1_score(label_ts.cpu(), predict_ts.cpu(), average='macro')
+        con_mat = confusion_matrix(label_ts.cpu().numpy(), predict_ts.cpu().numpy())
+
         # micro_f1 = f1_score(label_ts.cpu(), predict_ts.cpu(), average='micro')
         # print('Accuracy, Macro F1, Micro F1 of Device %d on the %d test cases: %.2f %%, %.2f, %.2f' % (self.id, len(label_ts), acc*100, macro_f1, micro_f1))
         print('Accuracy, Macro F1 of Device %d on the %d test cases: %.2f %%, %.2f %%' % (self.id, len(label_ts), acc*100, macro_f1*100))
         self.test_metrics.append([acc, macro_f1])
+        return con_mat
 
 
 #     def model_representation(self, test_set, repr='output'):
