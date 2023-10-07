@@ -44,11 +44,12 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         # single-processing!
         for j in range(num_nodes):
             nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_fedprox, reg_model = server.model, lam= reg))
-            nodes[j].local_test()
+            nodes[j].local_test_conf()
+            # nodes[j].local_test()
         # server aggregation
         server.model.load_state_dict(server.aggregate([nodes[i].model for i in range(num_nodes)], weight_list))
         # test accuracy
-        server.acc(nodes, weight_list)
+        server.acc_conf(nodes, weight_list)
 
     # log
     log(os.path.basename(__file__)[:-3] + add_(reg) + add_(split_para) , nodes, server)

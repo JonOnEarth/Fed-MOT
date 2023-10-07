@@ -176,7 +176,7 @@ class CNNCifar(nn.Module):
     
 class CNNJammer(nn.Module):
     def __init__(self):
-        super().__init__()
+        super(CNNJammer,self).__init__()
         self.conv1 = nn.Conv2d(3, 16, 12, stride=4)
         self.pool = nn.MaxPool2d(2, stride=4)
         self.fc1 = nn.Linear(3136, 6)

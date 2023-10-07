@@ -80,18 +80,32 @@ class data_process:
                 transforms.ToTensor(),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
             self.train_dataset = datasets.ImageFolder(
-                dir+dataset_name+'/Image_training_database', transform=transform)
+                dir+dataset_name+'/jammer_train_dataset', transform=transform)
             self.test_dataset = datasets.ImageFolder(
-                dir+dataset_name+'/Image_validation_database', transform=transform)
-            # shuffle the dataset
-            total_size = len(self.train_dataset)
-            indices = list(range(total_size))
-            np.random.shuffle(indices)
-            self.train_dataset = Subset(self.train_dataset, indices)
-            total_size_test = len(self.test_dataset)
-            indices_test = list(range(total_size_test))
-            np.random.shuffle(indices_test)
-            self.test_dataset = Subset(self.test_dataset, indices_test)
+                dir+dataset_name+'/jammer_test_dataset', transform=transform)
+            
+            # for i in range(len(self.train_dataset)):
+            #     self.train_dataset[i] = (self.train_dataset[i][0], torch.tensor(0))
+            
+            # # choose 1000 images from each class
+            # chunk_size = 1000
+            # subsets = {target: Subset(self.train_dataset, [i for i, (x, y) in enumerate(self.train_dataset) if y == target]) for _, target in self.train_dataset.class_to_idx.items()}
+            # self.train_dataset = ConcatDataset([Subset(subset, np.random.choice(len(subset), chunk_size, replace=False)) for subset in subsets.values()])
+            # print(len(self.train_dataset))
+            # chunk_size_test = 200
+            # subsets_test = {target: Subset(self.test_dataset, [i for i, (x, y) in enumerate(self.test_dataset) if y == target]) for _, target in self.test_dataset.class_to_idx.items()}
+            # self.test_dataset = ConcatDataset([Subset(subset, np.random.choice(len(subset), chunk_size_test, replace=False)) for subset in subsets_test.values()])
+            # print(len(self.test_dataset))
+
+            # # shuffle the dataset
+            # total_size = len(self.train_dataset)
+            # indices = list(range(total_size))
+            # np.random.shuffle(indices)
+            # self.train_dataset = Subset(self.train_dataset, indices[:10000])
+            # total_size_test = len(self.test_dataset)
+            # indices_test = list(range(total_size_test))
+            # np.random.shuffle(indices_test)
+            # self.test_dataset = Subset(self.test_dataset, indices_test[:2000])
             # print(len(self.train_dataset))
 
 

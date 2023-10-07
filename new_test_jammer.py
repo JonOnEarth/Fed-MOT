@@ -25,7 +25,7 @@ global_rounds = 50
 local_steps = 10
 batch_size = 64 # 32
 # optimizer = partial(optim.SGD,lr=0.005, momentum=0.9)
-optimizer = partial(optim.Adam,lr=0.001, betas=(0.9, 0.999), weight_decay=0.0001)
+optimizer = partial(optim.Adam,lr=0.005, betas=(0.9, 0.999), weight_decay=0.0001)
 # optimizer = partial(optim.SGD,lr=0.001)
 # device = torch.device('cuda:2')
 # device = torch.device('cuda')  # Use GPU if available
@@ -117,9 +117,9 @@ if __name__ == '__main__':
     # centrailized methods
     central.run(data_process(dataset), batch_size, model, nn.CrossEntropyLoss, optimizer, global_rounds, device = device)
 
-    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
-                        for dataset_splited in dataset_splited_list \
-                        for model_name in model_name_list0)
+    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list0)
     
     # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
     #                     for dataset_splited in dataset_splited_list \

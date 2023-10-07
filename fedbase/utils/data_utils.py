@@ -152,3 +152,4 @@ def split_data(X, y,train_size=0.75):
     print()
     del X, y
     return train_data, test_data
+

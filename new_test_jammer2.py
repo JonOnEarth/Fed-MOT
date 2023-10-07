@@ -19,14 +19,16 @@ from fedbase.utils.get_digit5 import generate_Digit5
 from fedbase.utils.get_amazon_review import generate_AmazonReview
 from fedbase.utils.get_domainnet import generate_DomainNet
 
+from fedbase.utils import loader_gnss
+
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
 global_rounds = 50
 # num_nodes = 10
 local_steps = 10
-batch_size = 64 # 32
-# optimizer = partial(optim.SGD,lr=0.005, momentum=0.9)
-optimizer = partial(optim.Adam,lr=0.001, betas=(0.9, 0.999), weight_decay=0.0001)
-# optimizer = partial(optim.SGD,lr=0.001)
+batch_size = 64 # 32,64
+optimizer = partial(optim.SGD,lr=0.01, momentum=0.0)
+# optimizer = partial(optim.Adam,lr=0.001, betas=(0.9, 0.999))
+# optimizer = partial(optim.SGD,lr=0.01)
 # device = torch.device('cuda:2')
 # device = torch.device('cuda')  # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -55,10 +57,13 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         fedamp.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device)
     elif model_name == 'central':
         central.run(dataset_splited, batch_size, model, nn.CrossEntropyLoss, optimizer, global_rounds, device = device)
+    elif model_name == 'Fedprox':
+        fedprox.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, reg=1.0, device = device)
 
 if __name__ == '__main__':
-    dataset = 'jammer' #'amazon' #'digit5', 'jammer'
+    dataset = 'jammer' #'mnist' #'amazon' #'digit5', 'jammer'
     seeds = 1989 # 0,2020
+    # random seed
     if dataset == 'mnist':
         model = CNNMnist
     elif dataset == 'femnist':
@@ -91,8 +96,12 @@ if __name__ == '__main__':
         K = 6
         num_nodes = K*client_group
         dataset_splited_list = [generate_DomainNet(client_group=client_group, method='iid', alpha=10)]
+    # elif dataset == 'jammer':
+    #     num_nodes = 20 #4
+    #     dataset_name = 'data/jammer_split/client20_dir01/'
+    #     dataset_splited_list = [loader_gnss.load_dataloader(dataset_name, num_nodes)]
     else:
-        num_nodes = 20 #4
+        num_nodes = 10 #4
         K = num_nodes 
         noise = None #'rotation'
         dataset_splited_list = [
@@ -107,7 +116,7 @@ if __name__ == '__main__':
         ]
     n_assign_list = [3,6]
     
-    model_name_list0 = ['FedAvg', 'FedAMP',]#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl'
+    model_name_list0 = ['FedAvg']#'Fedprox']#, 'FedAMP',]#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl'
     model_name_list1 = ['GNN']
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'

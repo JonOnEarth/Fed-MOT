@@ -299,6 +299,36 @@ class node():
         self.test_metrics.append([acc, macro_f1])
 
 
+    def local_test_conf(self, model_res = None):
+        predict_ts = torch.empty(0).to(self.device)
+        label_ts = torch.empty(0).to(self.device)
+        with torch.no_grad():
+            for data in self.test:
+                inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = torch.flatten(labels)
+                labels = labels.to(self.device, dtype = torch.long)
+                if model_res:
+                    model_res.to(self.device)
+                    outputs = model_res(inputs) + self.model(inputs)
+                else:
+                    outputs = self.model(inputs)
+                # print(outputs.data.dtype)
+                _, predicted = torch.max(outputs.data, 1)
+                predict_ts = torch.cat([predict_ts, predicted], 0)
+                label_ts = torch.cat([label_ts, labels], 0)
+        acc = accuracy_score(label_ts.cpu(), predict_ts.cpu())
+        macro_f1 = f1_score(label_ts.cpu(), predict_ts.cpu(), average='macro')
+        # con_mat = confusion_matrix(label_ts.cpu().numpy(), predict_ts.cpu().numpy())
+        # micro_f1 = f1_score(label_ts.cpu(), predict_ts.cpu(), average='micro')
+        # print('Accuracy, Macro F1, Micro F1 of Device %d on the %d test cases: %.2f %%, %.2f, %.2f' % (self.id, len(label_ts), acc*100, macro_f1, micro_f1))
+        print('Accuracy, Macro F1 of Device %d on the %d test cases: %.2f %%, %.2f %%' % (self.id, len(label_ts), acc*100, macro_f1*100))
+        self.test_metrics.append([acc, macro_f1])
+        # self.con_mats.append(con_mat)
+        self.label_ts = label_ts.cpu().numpy()
+        self.predict_ts = predict_ts.cpu().numpy()
+
+
     def local_ensemble_test(self, model_list, voting = 'soft'):
         predict_ts = torch.empty(0).to(self.device)
         label_ts = torch.empty(0).to(self.device)

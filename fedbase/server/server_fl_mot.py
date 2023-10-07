@@ -30,15 +30,25 @@ class server_class():
     def assign_model_lambda(self, model_lambda):
         self.model_lambda = model_lambda
 
+    # def aggregate(self, model_list, weight_list):
+    #     aggregated_weights = model_list[0].state_dict()
+    #     for j in aggregated_weights.keys():
+    #         aggregated_weights[j] = torch.zeros(aggregated_weights[j].shape).to(self.device)
+    #     # sum_size = sum([nodes[i].data_size for i in idlist])
+    #     for i in range(len(model_list)):
+    #         for j in model_list[i].state_dict().keys():
+    #             aggregated_weights[j] += model_list[i].state_dict()[j]*weight_list[i]
+    #     return aggregated_weights
+    
     def aggregate(self, model_list, weight_list):
-        aggregated_weights = model_list[0].state_dict()
-        for j in aggregated_weights.keys():
-            aggregated_weights[j] = torch.zeros(aggregated_weights[j].shape).to(self.device)
-        # sum_size = sum([nodes[i].data_size for i in idlist])
-        for i in range(len(model_list)):
-            for j in model_list[i].state_dict().keys():
-                aggregated_weights[j] += model_list[i].state_dict()[j]*weight_list[i]
-        return aggregated_weights
+        new_param = {}
+        model_example = copy.deepcopy(model_list[0])
+        with torch.no_grad():
+            for name, param in model_example.named_parameters():
+                new_param[name] = param.data.zero_()
+                for w, idx in zip(weight_list, range(len(model_list))):
+                    new_param[name] += model_list[idx].state_dict()[name].to(self.device) * w
+        return new_param
     
     def aggregate_bayes(self, model_list, model_lambda_list, weight_list, aggregated_method='GA',eps=0):
         # update the server model

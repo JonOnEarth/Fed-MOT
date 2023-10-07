@@ -55,6 +55,20 @@ class server_class():
         print('GLOBAL Accuracy, Macro F1 is %.2f %%, %.2f %%' % (100*global_test_metrics[0], 100*global_test_metrics[1]))
         self.test_metrics.append(global_test_metrics)
 
+    def acc_conf(self, nodes, weight_list):
+        global_test_metrics = [0]*2
+        # global_con_mat = np.zeros((10,10))
+        label_ts_all = []
+        pred_ts_all = []
+        for i in range(len(weight_list)):
+            for j in range(len(global_test_metrics)):
+                    global_test_metrics[j] += weight_list[i]*nodes[i].test_metrics[-1][j]
+            label_ts_all.extend(nodes[i].label_ts)
+            pred_ts_all.extend(nodes[i].predict_ts)
+        print('GLOBAL Accuracy, Macro F1 is %.2f %%, %.2f %%' % (100*global_test_metrics[0], 100*global_test_metrics[1]))
+        self.test_metrics.append(global_test_metrics)
+        self.con_mats.append(confusion_matrix(label_ts_all, pred_ts_all))
+
     def client_sampling(self, frac, distribution):
         pass
 
