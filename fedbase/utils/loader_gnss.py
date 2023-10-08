@@ -79,7 +79,8 @@ def load_dataloader(dataset_name, num_clients):
     #         test_label = torch.cat((test_label, y), 0) if test_label is not None else torch.empty(0)
     # test_label = test_label.long()
     # test_loader_global = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(test_x, test_label), args.test_batch_size, shuffle=False)
-    return train_loaders, test_loaders
+    split_para = None
+    return train_loaders, test_loaders, split_para
 
 def load_all(dataset_name, num_clients):
     train_data = []

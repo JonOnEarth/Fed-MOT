@@ -7,12 +7,16 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from pandas.plotting import parallel_coordinates
 import traceback
+from sklearn.metrics import confusion_matrix
+
 
 class server_class():
     def __init__(self, device):
         self.device = device
         self.test_metrics = []
         self.clustering = {'label':[], 'raw':[], 'center':[]}
+        self.test_metrics_best = []
+        self.con_mats = []
 
     def assign_model(self, model):
         try:

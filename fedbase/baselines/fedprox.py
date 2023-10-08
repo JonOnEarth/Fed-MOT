@@ -49,8 +49,8 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         server.distribute([nodes[i].model for i in range(num_nodes)])
         # test accuracy
         for j in range(num_nodes):
-            nodes[j].local_test()
-        server.acc(nodes, weight_list)
+            nodes[j].local_test_conf()
+        server.acc_conf(nodes, weight_list)
 
     # log
     log(os.path.basename(__file__)[:-3] + add_(reg) + add_(split_para) , nodes, server)

@@ -43,7 +43,7 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         print('-------------------Global round %d start-------------------' % (i))
         # single-processing!
         for j in range(num_nodes):
-            nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_fedprox, reg_model = server.model, lam= reg))
+            nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_fedprox, reg_model = server.model, reg_lam = reg))
             nodes[j].local_test_conf()
             # nodes[j].local_test()
         # server aggregation

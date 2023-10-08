@@ -46,13 +46,16 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         print('-------------------Global round %d start-------------------' % (t))
         # single-processing!
         for j in range(num_nodes):
-            nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
-            # nodes[j].local_update_epochs(local_steps, partial(nodes[j].train_single_step))
+            # nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step))
+            nodes[j].local_update_epochs(local_steps, partial(nodes[j].train_single_step))
             # nodes[j].local_test_conf()
+            print('node %d local update done' % (j))
         # server aggregation and distribution
         # server.model.load_state_dict(server.aggregate([nodes[i].model for i in range(num_nodes)], weight_list))
+        # weight_list = [1/num_nodes for i in range(num_nodes)]
         model_k = server.aggregate([nodes[i].model for i in range(num_nodes)], weight_list)
-        server.distribute([nodes[i].model for i in range(num_nodes)], model_k)
+        server.model.load_state_dict(model_k)
+        server.distribute([nodes[i].model for i in range(num_nodes)])
         # test accuracy
         for j in range(num_nodes):
         #     nodes[j].local_test()

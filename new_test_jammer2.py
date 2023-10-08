@@ -25,7 +25,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as t
 global_rounds = 50
 # num_nodes = 10
 local_steps = 10
-batch_size = 64 # 32,64
+batch_size = 10 # 32,64
 optimizer = partial(optim.SGD,lr=0.01, momentum=0.0)
 # optimizer = partial(optim.Adam,lr=0.001, betas=(0.9, 0.999))
 # optimizer = partial(optim.SGD,lr=0.01)
@@ -59,6 +59,8 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         central.run(dataset_splited, batch_size, model, nn.CrossEntropyLoss, optimizer, global_rounds, device = device)
     elif model_name == 'Fedprox':
         fedprox.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, reg=1.0, device = device)
+    elif model_name == 'Ditto':
+        ditto.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, reg=1.0, device = device)
 
 if __name__ == '__main__':
     dataset = 'jammer' #'mnist' #'amazon' #'digit5', 'jammer'
@@ -116,17 +118,17 @@ if __name__ == '__main__':
         ]
     n_assign_list = [3,6]
     
-    model_name_list0 = ['FedAvg']#'Fedprox']#, 'FedAMP',]#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl'
-    model_name_list1 = ['GNN']
-    model_name_list2 = ['JPDA','MHT'] #,'MHT'
+    model_name_list0 = ['FedAvg','Fedprox','Ditto', 'FedAMP',]#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl'
+    # model_name_list1 = ['GNN']
+    # model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
     K_set = K
-    warm_ups = [False,True]
+    # warm_ups = [False,True]
 
     # centrailized methods
     # central.run(data_process(dataset), batch_size, model, nn.CrossEntropyLoss, optimizer, global_rounds, device = device)
 
-    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
+    Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
                         for dataset_splited in dataset_splited_list \
                         for model_name in model_name_list0)
     

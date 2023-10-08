@@ -42,13 +42,15 @@ class server_class():
     
     def aggregate(self, model_list, weight_list):
         new_param = {}
-        model_example = copy.deepcopy(model_list[0])
+        new_model = copy.deepcopy(model_list[0])
         with torch.no_grad():
-            for name, param in model_example.named_parameters():
-                new_param[name] = param.data.zero_()
-                for w, idx in zip(weight_list, range(len(model_list))):
-                    new_param[name] += model_list[idx].state_dict()[name].to(self.device) * w
-        return new_param
+            for name, param in new_model.named_parameters():
+                param.data.zero_()
+
+        for w, client_model in zip(weight_list, model_list):
+            for new_model_param, model_param in zip(new_model.parameters(), client_model.parameters()):
+                new_model_param.data += w * model_param.data.to(self.device)
+        return new_model.state_dict()
     
     def aggregate_bayes(self, model_list, model_lambda_list, weight_list, aggregated_method='GA',eps=0):
         # update the server model

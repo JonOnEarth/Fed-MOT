@@ -19,6 +19,9 @@ from collections import Counter
 import torchvision.transforms.functional as TF
 # import medmnist
 from skimage.util import random_noise
+import random
+from torchvision.datasets import ImageFolder
+from torch.utils.data import Subset
 
 class data_process:
     def __init__(self, dataset_name):
@@ -79,14 +82,32 @@ class data_process:
                 transforms.Resize(224),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-            self.train_dataset = datasets.ImageFolder(
-                dir+dataset_name+'/jammer_train_dataset', transform=transform)
-            self.test_dataset = datasets.ImageFolder(
-                dir+dataset_name+'/jammer_test_dataset', transform=transform)
+            # self.train_dataset = datasets.ImageFolder(
+            #     dir+dataset_name+'/jammer_train_dataset', transform=transform)
+            # self.test_dataset = datasets.ImageFolder(
+            #     dir+dataset_name+'/jammer_test_dataset', transform=transform)
             
-            # for i in range(len(self.train_dataset)):
-            #     self.train_dataset[i] = (self.train_dataset[i][0], torch.tensor(0))
-            
+            # choose 1000 images from each class of folder as the train dataset
+            # Specify the paths to the folders containing the images
+            # construct the full dataset
+
+            train_dataset = ImageFolder(dir+dataset_name+'/Image_training_database', transform=transform)
+            test_dataset = ImageFolder(dir+dataset_name+'/Image_training_database', transform=transform)
+            # select the 1000 indices of each folder
+            def subset_indices(dataset,size=100):
+                idxs = []
+                for i in range(6):
+                    idx = [j for j in range(len(dataset)) if dataset.imgs[j][1] == i]
+                    # random choose 1000 indices
+                    idx = random.sample(idx, size)
+                    idxs.extend(idx)
+                    # print(idx[1:10])
+                return idxs
+            # build the appropriate subset
+            self.train_dataset = Subset(train_dataset, subset_indices(train_dataset))
+            self.test_dataset = Subset(test_dataset, subset_indices(test_dataset))
+            print('train dataset size: ', len(self.train_dataset))
+            print('test dataset size: ', len(self.test_dataset))
             # # choose 1000 images from each class
             # chunk_size = 1000
             # subsets = {target: Subset(self.train_dataset, [i for i, (x, y) in enumerate(self.train_dataset) if y == target]) for _, target in self.train_dataset.class_to_idx.items()}
@@ -107,8 +128,6 @@ class data_process:
             # np.random.shuffle(indices_test)
             # self.test_dataset = Subset(self.test_dataset, indices_test[:2000])
             # print(len(self.train_dataset))
-
-
 
         sample = next(iter(self.train_dataset))
         image, label = sample
