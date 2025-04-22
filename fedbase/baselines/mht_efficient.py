@@ -19,7 +19,6 @@ import inspect
 from functools import partial
 import copy
 from fedbase.utils import assignment_func
-import time
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
@@ -89,11 +88,12 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     # train!
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))
-        start_time = time.time()
+
         cost_ks_assignments_hypothesis_new = []
         cluster_models_assignments_hypothesis_new = []
         cluster_models_lambda_assignments_hypothesis_new = []
-
+        # server 
+        assignments_hs = []
         for h in range(hypothesis):
             
             cost_matrix = torch.zeros((num_nodes, K))
@@ -106,6 +106,20 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                     cost_matrix[j][k] = loss
             assignments = assignment_func.get_num_assignments(cost_matrix.numpy(), num_assign)
             print('assignments: ', assignments)
+            assignments_hs.append(assignments)
+        
+        # compare the assignment in assignments of all hypothesis
+        # if the assignment is the same, then only train once
+        # if the assignment is different, then train the node again
+        # the example is [[[0,1,0,1],[1,0,1,0],[0,1,0,1]],[[0,1,0,1],[1,0,1,0],[0,1,1,1]]]
+        assignments_list = [assignments_hs[h][a] for h in range(hypothesis) for a in range(num_assign)]
+        transposed_list = list(zip(*assignments_list)) # Transpose the multi_list
+        distinct_sets = [set(index_values) for index_values in transposed_list]    
+
+        # send the decision to nodes
+        for j in range(num_nodes):
+            nodes[j].assign_model
+
             trained_index = []
             trained_nodes = []
             nodes_assignments = [copy.deepcopy(nodes) for a in range(len(assignments))]
@@ -224,7 +238,6 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         #     server.acc(nodes, weight_list)
         # elif accuracy_type == 'ensemble':
         #     print('test ensemble\n')
-        # to do: easy to do the test. here the implementation is too much
         print(f'test ensemble of each round {t}\n')
         assignment = [[] for i in range(K)]
         cost_matrix = torch.zeros((num_nodes, K))
@@ -245,9 +258,6 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         del cluster_models_assignments_hypothesis_new, cluster_models_lambda_assignments_hypothesis_new,\
             cost_ks_assignments_hypothesis_new, cluster_models_assignments, cluster_models_lambda_assignments, cost_ks_assignments
 
-        # time for a global round
-        end_time = time.time()-start_time
-        print('-------------------Global round %d end, time: %f-------------------' % (t, end_time))
 
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]

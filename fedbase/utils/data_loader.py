@@ -344,8 +344,8 @@ class data_process:
         # return train_data_rotated
 
 
-def log(file_name, nodes, server, H=None,assign_method=None, bayes=None):
-    local_file = './log/' + file_name + "_" + d.datetime.now().strftime("%m%d_%H%M%S")+'_'+str(np.random.choice(10**3)) + ".json"
+def log(file_name, nodes, server, H=None,assign_method=None, bayes=None,path='log/'):
+    local_file = './'+path + file_name + "_" + d.datetime.now().strftime("%m%d_%H%M%S")+'_'+str(np.random.choice(10**3)) + ".json"
     log = {}
     log['node'] = {}
     for i in range(len(nodes)):

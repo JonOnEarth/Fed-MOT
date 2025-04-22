@@ -10,7 +10,8 @@ import random
 # import skfuzzy as fuzz
 # from skfuzzy import control as ctrl
 from sklearn.metrics import confusion_matrix
-
+from sklearn.mixture import BayesianGaussianMixture
+from fedbase.server.dirichlet_process import DPMM
 
 class server_class():
     def __init__(self, device):
@@ -234,6 +235,33 @@ class server_class():
         # self.clustering['raw'].append(X)
         # self.clustering['center'].append(kmeans.cluster_centers_)
 
+    def weighted_clustering_unknown(self, nodes, idlist):
+        
+        X = []
+        for i in idlist:
+            X.append(np.array(torch.flatten(nodes[i].model.state_dict()[list(nodes[i].model.state_dict().keys())[-2]]).cpu()))
+        # use dirichlet process to cluster the nodes
+        # dpgmm = BayesianGaussianMixture(n_components=10, covariance_type='diag',weight_concentration_prior=0.002, warm_start=True).fit(X)
+        dpgm = DPMM(alpha=0.1, covariance_type='same', n_iter=100)
+        dpgm.fit(np.asarray(X))
+        labels = dpgm.predict(np.asarray(X))
+        print(labels)
+        # rewrite the label to 0,1,2,3...
+        # Unique labels sorted
+        unique_labels = np.unique(labels)
+        # Create a dictionary mapping original labels to new labels (0, 1, 2, 3...)
+        label_mapping = {label: index for index, label in enumerate(unique_labels)}
+        # Map the original labels to new labels
+        new_labels = [label_mapping[label] for label in labels]
+        K = len(set(new_labels))
+        print("K:",K, "labels:",new_labels)
+        print([list(labels).count(i) for i in range(K)])
+        for i in idlist:
+            nodes[i].label = labels[i]
+        self.clustering['label'].append(list(labels.astype(int)))
+        return K
+
+    
     def soft_clustering(self, nodes, idlist, K, weight_type='data_size'):
         weight = []
         X = []
@@ -400,3 +428,24 @@ class server_class():
             new_model_list.append(mu)
             labels = range(len(model_list))
         return new_model_list, labels
+    
+    # for Fedsoft aggregation
+    def aggregate_fedsoft(self, selection, K,nodes,cluster_vec,do_selection=True):
+        for s in range(K):
+            next_weights = self.generate_zero_weights()
+            for k in selection[s]:
+                if do_selection:
+                    aggregation_weight = 1. / K
+                else:
+                    aggregation_weight = self.importance_weights_matrix[k][s]
+                client_weights = nodes[k].model.state_dict()
+                for key in next_weights.keys():
+                    next_weights[key] += aggregation_weight * client_weights[key].cpu()
+            cluster_vec[s].load_state_dict(state_dict=next_weights)
+        return cluster_vec
+
+    def generate_zero_weights(self):
+        self._zero_weights = {}
+        for key, val in self.model.state_dict().items():
+            self._zero_weights[key] = torch.zeros(size=val.shape, dtype=torch.float32)
+        return copy.deepcopy(self._zero_weights)

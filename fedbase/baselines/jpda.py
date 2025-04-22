@@ -19,11 +19,12 @@ import inspect
 from functools import partial
 import copy
 from fedbase.utils import assignment_func
+import time
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
          bayes=True,num_assign=3,temperature=1.,accuracy_type='single',cost_method='weighted',\
-            warm_up=False, warm_up_rounds=2):
+            warm_up='False', warm_up_rounds=2, path='log/'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -63,7 +64,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     cluster_models_lambda = [model_lambda for i in range(K)]
 
     # warm up
-    if warm_up==True:
+    if warm_up=='True':
         for warm_up_round in range(warm_up_rounds):
             print('-------------------Warm up round %d start-------------------' % (warm_up_round))
             for j in range(num_nodes):
@@ -85,7 +86,7 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     # train!
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))
-
+        start_time = time.time()
         # local update
         assignment = [[] for i in range(K)]
         cost_matrix = torch.zeros((num_nodes, K))
@@ -221,10 +222,13 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         del cost_ks_assignments, weight_assignments, cluster_models_assignments,\
               cluster_models_lambda_assignments, nodes_associations
 
+        # time for a global round
+        end_time = time.time()-start_time
+        print('-------------------Global round %d end, time: %f-------------------' % (t, end_time))
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
         # log
-        log(os.path.basename(__file__)[:-3] +add_(K) + add_(num_assign)+ add_(warm_up) + add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] +add_(K) + add_(num_assign)+ add_(warm_up) + add_(split_para), nodes, server,path=path)
         return cluster_models, assign
     else:
         if not finetune_steps:

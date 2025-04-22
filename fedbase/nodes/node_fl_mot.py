@@ -8,6 +8,7 @@ from functools import partial
 from statistics import mode
 import torch.nn.functional as F
 import copy
+import numpy as np
 
 from sklearn.metrics import confusion_matrix
 
@@ -21,6 +22,7 @@ class node():
         # self.con_mats = []
         self.label_ts = []
         self.predict_ts = []
+        self.importance_estimated = []
 
     def assign_train(self, data):
         self.train = data
@@ -198,6 +200,61 @@ class node():
                     break
         # return train_loss/len(self.train)
         return train_loss/i
+    
+    # for FedSoft estimate importance weights
+    def estimate_importance_weights(self,cluster_vec,num_classes,count_smoother=0.0001):
+        
+        with torch.no_grad():
+            table = np.zeros((len(cluster_vec), self.data_size))
+            start_idx = 0
+            nst_cluster_sample_count = [0] * len(cluster_vec)
+            for data in self.train:
+                inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = torch.flatten(labels)
+                labels = labels.to(self.device, dtype = torch.long)
+                for s, cluster in enumerate(cluster_vec):
+                    cluster.eval()
+                    out = cluster(inputs)
+                    out = out.view(-1, num_classes)
+                    loss = torch.nn.CrossEntropyLoss(reduction='none')(out, labels)
+                    table[s][start_idx:start_idx + len(inputs)] = loss.cpu()
+                start_idx += len(inputs)
+
+            min_loss_idx = np.argmin(table, axis=0)
+            for s in range(len(cluster_vec)):
+                nst_cluster_sample_count[s] += np.sum(min_loss_idx == s)
+            for s in range(len(cluster_vec)):
+                if nst_cluster_sample_count[s] == 0:
+                    nst_cluster_sample_count[s] = count_smoother * self.data_size
+            self.importance_estimated = np.array([1.0 * nst / self.data_size for nst in nst_cluster_sample_count])
+    
+    # for FedSoft Local train
+    def train_single_step_fedsoft(self, inputs, labels, cluster_vec=None, reg_lam = None):
+        inputs = inputs.to(self.device)
+        labels = torch.flatten(labels)
+        labels = labels.to(self.device, dtype = torch.long)
+        self.optim.zero_grad()
+        out = self.model(inputs)
+        self.loss = self.objective(out, labels)
+        mse_loss = torch.nn.MSELoss(reduction='sum')
+        for i, cluster in enumerate(cluster_vec):
+            l2 = None
+            for (param_local, param_cluster) in zip(self.model.parameters(), cluster.parameters()):
+                if l2 is None:
+                    l2 = mse_loss(param_local, param_cluster)
+                else:
+                    l2 += mse_loss(param_local, param_cluster)
+            self.loss += reg_lam / 2 * self.importance_estimated[i] * l2
+        self.loss.backward()
+        self.optim.step()
+
+    # for FedSoft get importance
+    def get_importance(self, count=True):
+        if count:
+            return [ust * self.data_size for ust in self.importance_estimated]
+        else:
+            return self.importance_estimated
 
     def local_train_acc(self, model):
         model.to(self.device)

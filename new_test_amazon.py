@@ -20,7 +20,7 @@ from fedbase.utils.get_amazon_review import generate_AmazonReview
 from fedbase.utils.get_domainnet import generate_DomainNet
 
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # set the current path as the working directory
-global_rounds = 30
+global_rounds = 100
 # num_nodes = 10
 local_steps = 10
 batch_size = 32
@@ -37,9 +37,11 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
     np.random.seed(seeds)
     # dataset_splited, model = dataset_splited_model[0], dataset_splited_model[1]
     if model_name == 'FedAvg':
-        fedavg.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device)
+        fedavg.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device, personalized=True)
     elif model_name == 'BayesFedAvg':
         fedavg_bayes.run(dataset_splited,batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device)
+    elif model_name == 'BayesPFedAvg':
+        fedavg_bayes.run(dataset_splited,batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device, personalized=True)
     elif model_name == 'Wecfl':
         GNN.run(dataset_splited,batch_size,K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, assign_method='wecfl',bayes=False, device = device)
     elif model_name == 'Fesem':
@@ -50,7 +52,14 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         jpda.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,device=device, cost_method=cost_method,warm_up=warm_up)
     elif model_name == 'MHT':
         mht.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, bayes=True, num_assign=n_assign,hypothesis=n_assign, device=device, cost_method=cost_method,warm_up=warm_up)
-
+    elif model_name == 'Wecfl_unknown':
+        GNN.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, assign_method='wecfl_unknown',bayes=False, device = device)
+    elif model_name == 'FedAMP':
+        fedamp.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device)
+    elif model_name == 'FedSoft':
+        fedsoft.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, selection_size=5,num_classes=2,reg_lam=0.1,device = device)
+# dataset_splited,batch_size,K,num_nodes,model,objective,optimizer,local_steps,selection_size,\
+#         global_rounds,num_classes,estimation_interval=1,reg_lam = None,do_selection=True
 if __name__ == '__main__':
     dataset = 'amazon' #'amazon' #'digit5'
     seeds = 1989 # 0,2020
@@ -69,7 +78,7 @@ if __name__ == '__main__':
     elif dataset == 'domainnet':
         model = AlexNet
 
-    client_group = 10
+    client_group = 2
     if dataset == 'digit5':
         # for Digit5
         domains=['mnistm', 'mnist', 'usps', 'svhn','syn'] #,
@@ -100,20 +109,21 @@ if __name__ == '__main__':
     
     n_assign_list = [3,6]
     
-    model_name_list0 = ['FedAvg','Wecfl']#,] #,，'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',
+    model_name_list0 = ['BayesPFedAvg']#,] #,，FedSoft'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',Wecfl_unknown,FedAMP
     model_name_list1 = ['GNN']
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
-    K_set = K
-    warm_ups = [False,True]
+    K_set = K #K+1
+    warm_ups = [False]#,True]
+
     Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set) \
                         for dataset_splited in dataset_splited_list \
                         for model_name in model_name_list0)
     
-    Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
-                        for dataset_splited in dataset_splited_list \
-                        for model_name in model_name_list1 \
-                            for warm_up in warm_ups)
+    # Parallel(n_jobs=2)(delayed(main)(seeds, dataset_splited, model, model_name, K_set, warm_up=warm_up) \
+    #                     for dataset_splited in dataset_splited_list \
+    #                     for model_name in model_name_list1 \
+    #                         for warm_up in warm_ups)
 
     # Parallel(n_jobs=1)(delayed(main)(seeds, dataset_splited, model, model_name,K_set, n_assign, warm_up) \
     #                     for dataset_splited in dataset_splited_list \
@@ -122,19 +132,19 @@ if __name__ == '__main__':
     #                         for warm_up in warm_ups)
 
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[0], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[0])
     
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[0],warm_up=warm_ups[1])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[0])
 
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
-    main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])
+    # main(seeds, dataset_splited_list[0], model, model_name_list2[1], K=K, n_assign=n_assign_list[1],warm_up=warm_ups[1])

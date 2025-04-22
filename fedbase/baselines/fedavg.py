@@ -11,7 +11,8 @@ import os
 from functools import partial
 
 def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, global_rounds, local_steps,\
-     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), log_file=True, finetune=False, finetune_steps = None):
+     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), log_file=True,\
+          finetune=False, finetune_steps = None, path='log/'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -66,7 +67,7 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
     if not finetune:
         # log
         if log_file:
-            log(os.path.basename(__file__)[:-3] + add_(split_para), nodes, server)
+            log(os.path.basename(__file__)[:-3] + add_(split_para), nodes, server, path=path)
         return server.model
     else:
         if not finetune_steps:

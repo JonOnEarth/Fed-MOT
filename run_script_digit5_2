@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --partition=short
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --time=24:00:00
-#SBATCH --job-name=c_cpu
+#SBATCH --job-name=cpu_digit5
 #SBATCH --mem=48GB
 #SBATCH --ntasks=1
 #SBATCH --output=myjob.%j.out
@@ -12,4 +12,4 @@ conda create --name pytorch_env python=3.10 -y
 source activate pytorch_env
 conda install scikit-image pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia -y
 pip install joblib matplotlib numpy pandas scikit-learn scipy seaborn
-python new_test_cifar.py
+python new_test_digit5_2.py

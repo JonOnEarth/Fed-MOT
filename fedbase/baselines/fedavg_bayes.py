@@ -12,7 +12,7 @@ from fedbase.nodes.node_fl_mot import node
 
 def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, global_rounds, local_steps,\
      device, log_file=True, finetune=False, finetune_steps = None,\
-          weight_method = 'loss',aggregated_method='AA'):
+          weight_method = 'loss',aggregated_method='AA',personalized=False):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -69,12 +69,21 @@ def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, glo
         # for name, param in server.model.named_parameters():
         #     server.model.state_dict()[name].data.copy_(new_param[name])
         #     server.model_lambda[name].data.copy_(new_lambda[name])
-        server.distribute([nodes[i].model for i in range(num_nodes)],new_param)
-        server.distribute_lambda([nodes[i].model_lambda for i in range(num_nodes)],new_lambda)
-        # test accuracy
-        for j in range(num_nodes):
-            nodes[j].local_test()
-        server.acc(nodes, weight_list)
+        if personalized:
+            # test accuracy
+            for j in range(num_nodes):
+                nodes[j].local_test()
+            server.acc(nodes, weight_list)
+            server.distribute([nodes[i].model for i in range(num_nodes)],new_param)
+            server.distribute_lambda([nodes[i].model_lambda for i in range(num_nodes)],new_lambda)
+        else:
+            server.acc(nodes, weight_list)
+            server.distribute([nodes[i].model for i in range(num_nodes)],new_param)
+            server.distribute_lambda([nodes[i].model_lambda for i in range(num_nodes)],new_lambda)
+            # test accuracy
+            for j in range(num_nodes):
+                nodes[j].local_test()
+            server.acc(nodes, weight_list)
 
     if not finetune:
         # log

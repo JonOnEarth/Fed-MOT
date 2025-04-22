@@ -3,14 +3,14 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:v100-sxm2:1
 #SBATCH --time=8:00:00
-#SBATCH --job-name=gpu_fg
+#SBATCH --job-name=gpu_c2
 #SBATCH --mem=48GB
 #SBATCH --ntasks=1
 #SBATCH --output=myjob.%j.out
 #SBATCH --error=myjob.%j.err
 # module load anaconda3/2022.05 cuda/11.8
-conda create --name pytorch_env python=3.10 -y
+# conda create --name pytorch_env python=3.10 -y
 source activate pytorch_env
-conda install scikit-image pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia -y
-pip install joblib matplotlib numpy pandas scikit-learn scipy seaborn
-python new_test_fash_group.py
+# pip install ujson
+
+python main.py --dataset $1 --model_name $2 --K $3 --n_assign $4 --warm_up $5 --client_group $6

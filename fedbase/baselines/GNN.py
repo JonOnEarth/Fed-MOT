@@ -18,10 +18,11 @@ import sys
 import inspect
 from functools import partial
 import copy
+import time
 
 def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
     reg_lam = None, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), finetune=False, finetune_steps = None,\
-        assign_method='ifca', bayes=True, warm_up=False, warm_up_rounds=2,accuracy_type='single'):
+        assign_method='ifca', bayes=True, warm_up='False', warm_up_rounds=2,accuracy_type='single',path='log/'):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
     train_splited, test_splited, split_para = dataset_splited
@@ -63,8 +64,10 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
     assign_method_copy = copy.deepcopy(assign_method)
     # train!
     for t in range(global_rounds):
+        # calculate how long it takes to finish a global round
+        start_time = time.time()
         print('-------------------Global round %d start-------------------' % (t))
-        if assign_method== 'ifca' and warm_up==True and t <= warm_up_rounds:
+        if assign_method== 'ifca' and warm_up=='True' and t <= warm_up_rounds:
             assign_method = 'wecfl'
         else:
             assign_method = assign_method_copy
@@ -99,8 +102,14 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step)) 
                 else:
                     nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = cluster_models[nodes[j].label], reg_model_lambda = cluster_models_lambda[nodes[j].label]))
-            # server clustering, assign_method=='wecfl'
             server.weighted_clustering(nodes, list(range(num_nodes)), K)
+        elif assign_method == 'wecfl_unknown':
+            for j in range(num_nodes):
+                if t == 0 or not bayes:
+                    nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step)) 
+                else:
+                    nodes[j].local_update_steps(local_steps, partial(nodes[j].train_single_step_bayes, reg_model = cluster_models[nodes[j].label], reg_model_lambda = cluster_models_lambda[nodes[j].label]))
+            K = server.weighted_clustering_unknown(nodes, list(range(num_nodes)))
 
     
         # server aggregation and distribution by cluster
@@ -134,11 +143,15 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
             for j in range(num_nodes):
                 nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
             server.acc(nodes, weight_list)
-    
+
+        # time for a global round
+        end_time = time.time()-start_time
+        print('-------------------Global round %d end, time: %f-------------------' % (t, end_time))
+
     if not finetune:
         assign = [[i for i in range(num_nodes) if nodes[i].label == k] for k in range(K)]
         # log
-        log(os.path.basename(__file__)[:-3] + add_(assign_method)+add_(K) + add_(reg_lam) + add_(warm_up)+ add_(split_para), nodes, server)
+        log(os.path.basename(__file__)[:-3] + add_(assign_method)+add_(K) + add_(reg_lam) + add_(warm_up)+ add_(split_para), nodes, server,path=path)
         return cluster_models, assign
     else:
         if not finetune_steps:

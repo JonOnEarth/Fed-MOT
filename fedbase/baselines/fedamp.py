@@ -19,8 +19,8 @@ import inspect
 from functools import partial
 import copy
 
-def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
-    reg_lam = 1.0, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),\
+def run(dataset_splited, batch_size, num_nodes, model, objective, optimizer, global_rounds, local_steps, \
+    reg_lam = 1.0, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),accuracy_type='single',\
          bayes=False):
     # dt = data_process(dataset)
     # train_splited, test_splited = dt.split_dataset(num_nodes, split['split_para'], split['split_method'])
@@ -79,14 +79,26 @@ def run(dataset_splited, batch_size, K, num_nodes, model, objective, optimizer, 
         cluster_models, assign_labels = server.aggregate_amp(model_list, weight_list=weight_list)
         # 2.2 send the close model to the corresponding node
         for i in range(num_nodes):
-            for k in range(K):
+            for k in range(num_nodes):
                 if assign_labels[i] == k:
                     nodes[i].assign_model(cluster_models[k])
             # server.distribute([nodes[i].model for i in range(num_nodes) if assign_labels[i] == k], cluster_models[k])
         # 3. accuracy evaluation
-        for j in range(num_nodes):
-            nodes[j].local_test_conf()
-        server.acc_conf(nodes, weight_list)
+        # for j in range(num_nodes):
+        #     nodes[j].local_test_conf()
+        # server.acc_conf(nodes, weight_list)
+
+        # test accuracy
+        if accuracy_type == 'single':
+            for j in range(num_nodes):
+                nodes[j].local_test()
+            server.acc(nodes, weight_list)
+        elif accuracy_type == 'ensemble':
+            print('test ensemble\n')
+            for j in range(num_nodes):
+                nodes[j].local_ensemble_test(cluster_models, voting = 'soft')
+            server.acc(nodes, weight_list)
+
         # delete the cluster_models
         del cluster_models
     # log

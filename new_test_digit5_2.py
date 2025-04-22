@@ -55,9 +55,9 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
     elif model_name == 'FedAMP':
         fedamp.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device)
     elif model_name == 'FedSoft':
-        fedsoft.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, selection_size=10,num_classes=10,reg_lam=0.01,device = device)
+        fedsoft.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, selection_size=5,num_classes=10,reg_lam=0.01,device = device)
 if __name__ == '__main__':
-    dataset = 'cifar10' #'amazon' #'digit5'
+    dataset = 'digit5' #'amazon' #'digit5'
     seeds = 1989 # 0,2020
     if dataset == 'mnist':
         model = CNNMnist
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     elif dataset == 'domainnet':
         model = AlexNet
 
-    client_group = 10
+    client_group = 2
     if dataset == 'digit5':
         # for Digit5
         domains=['mnistm', 'mnist', 'usps', 'svhn','syn'] #,
@@ -91,21 +91,21 @@ if __name__ == '__main__':
         dataset_splited_list = [generate_DomainNet(client_group=client_group, method='iid', alpha=10)]
     else:
         K = 4
-        num_nodes = 40 #40
+        num_nodes = 20 #40
         noise = None #'rotation'
         dataset_splited_list = [
-            # data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
-            # data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class'),\
-            # data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
-            # data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
-            # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
-            # data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
-            # data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
+            data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 5, 'dirichlet'),\
+            data_process(dataset).split_dataset_groupwise(K, 3, 'class', int(num_nodes/K), 2, 'class'),\
+            data_process(dataset).split_dataset(num_nodes, 3, 'class'),\
+            data_process(dataset).split_dataset(num_nodes, 0.1, 'dirichlet'),\
+            data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 0.1, 'dirichlet', noise),\
+            data_process(dataset).split_dataset_groupwise(K, 10, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise),\
+            data_process(dataset).split_dataset_groupwise(K, 5, 'class', int(num_nodes/K), 2, 'class', noise) ,\
             data_process(dataset).split_dataset_groupwise(K, 0.1, 'dirichlet', int(num_nodes/K), 10, 'dirichlet', noise)]
     
     n_assign_list = [3,6]
     
-    model_name_list0 = ['FedSoft']#,] #,，BayesPFedAvg,FedSoft'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl',Fesem
+    model_name_list0 = ['FedSoft'] # # 'BayesPFedAvg',FedSoft,BayesPFedAvg''FedAvg',#,，FedSoft,'BayesFedAvg','Fesem',,,,,'GNN','FedAvg',Wecfl,Fesem
     model_name_list1 = ['GNN']
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'
