@@ -17,10 +17,9 @@ import copy
 import time
 import numpy as np
 
-device = torch.device("mps") # torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def run(dataset_splited,batch_size,K,num_nodes,model,objective,optimizer,global_rounds,local_steps,selection_size,\
         num_classes,estimation_interval=1,reg_lam = None,do_selection=True,\
-            device = device,accuracy_type='single',path='log/',finetune=False, finetune_steps = None):
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),accuracy_type='single',path='log/',finetune=False, finetune_steps = None):
 
     # 1. initialization
     train_splited, test_splited, split_para = dataset_splited
@@ -47,7 +46,7 @@ def run(dataset_splited,batch_size,K,num_nodes,model,objective,optimizer,global_
     weight_list = [nodes[i].data_size/sum([nodes[i].data_size for i in range(num_nodes)]) for i in range(num_nodes)]
 
     # initialize K cluster model
-    cluster_models = [model() for i in range(K)]
+    cluster_models = [model().to(device) for i in range(K)]
 
     for t in range(global_rounds):
         print('-------------------Global round %d start-------------------' % (t))

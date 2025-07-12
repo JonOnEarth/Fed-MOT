@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 import torch
 from torch.utils.data import DataLoader, Dataset, random_split, Subset, ChainDataset, ConcatDataset
 from fedbase.utils.tools import get_targets
-from torch._utils import _accumulate
+from itertools import accumulate as _accumulate
 from sklearn.model_selection import train_test_split
 from fedbase.utils.data_utils import split_data, group_split, split_dataset
 
@@ -195,7 +195,7 @@ np.random.seed(1)
 data_path = "data/Digit5/"
 dir_path = "data/Digit5/"
 
-# Allocate data to usersz``
+# Allocate data to users
 def generate_Digit5(domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client_group=1, method='iid',alpha=0.5):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -212,11 +212,12 @@ def generate_Digit5(domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client
 
     root = data_path+"rawdata"
     
-    # Get Digit5 data
+    # Get Digit5 data - improved download mechanism
     if not os.path.exists(root):
         os.makedirs(root)
-        os.system(f'wget https://drive.google.com/u/0/uc?id=1PT6K-_wmsUEUCxoYzDy0mxF-15tvb2Eu&export=download -P {root}')
-        os.system(f'unzip {root}/Digit5.zip -d {root}')
+    
+    # Download individual datasets with proper error handling
+    download_digit5_datasets(root)
 
     X, y = [], []
     # domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn']
@@ -262,6 +263,148 @@ def generate_Digit5(domains = ['mnistm', 'mnist', 'syn', 'usps', 'svhn'], client
 
     
     return train_data, test_data, 'digit5' +'_'+ str(client_group)+'_'+ str(alpha)+'_'+ str(method)
+
+
+def download_digit5_datasets(root):
+    """
+    Download the complete Digit5 dataset from Google Drive
+    """
+    import urllib.request
+    import zipfile
+    import shutil
+    import subprocess
+    
+    # Check if required files already exist
+    required_files = [
+        'mnist_data.mat',
+        'mnistm_with_label.mat', 
+        'svhn_train_32x32.mat',
+        'svhn_test_32x32.mat',
+        'synth_train_32x32.mat',
+        'synth_test_32x32.mat',
+        'usps_28x28.mat'
+    ]
+    
+    all_exist = all(os.path.exists(os.path.join(root, f)) for f in required_files)
+    if all_exist:
+        print("All Digit5 dataset files already exist.")
+        return
+    
+    print("Downloading Digit5 dataset...")
+    
+    # Try to download the complete Digit5 dataset from the new Google Drive link
+    try:
+        # Download the complete Digit5 dataset (7z file)
+        digit5_7z = os.path.join(root, 'DigitFive.7z')
+        if not os.path.exists(digit5_7z):
+            print("Downloading Digit5 dataset from Google Drive...")
+            
+            # First, get the confirmation page to extract the UUID
+            file_id = '1QvC6mDVN25VArmTuSHqgd7Cf9CoiHvVt'
+            confirm_url = f'https://drive.usercontent.google.com/download?id={file_id}&export=download&authuser=0'
+            
+            try:
+                import subprocess
+                import re
+                
+                # Get the confirmation page
+                result = subprocess.run([
+                    'wget', '--no-check-certificate', '-O', digit5_7z, confirm_url
+                ], capture_output=True, text=True, timeout=60)
+                
+                if result.returncode != 0:
+                    print(f"wget failed: {result.stderr}")
+                    raise Exception("Download failed with wget")
+                
+                # Read the confirmation page and extract UUID
+                with open(digit5_7z, 'r') as f:
+                    html_content = f.read()
+                
+                # Check if we got HTML (confirmation page) or the actual file
+                if 'html' in html_content.lower() and 'uuid' in html_content:
+                    print("Got confirmation page, extracting UUID...")
+                    # Extract UUID from the HTML
+                    uuid_match = re.search(r'name="uuid" value="([^"]+)"', html_content)
+                    if uuid_match:
+                        uuid = uuid_match.group(1)
+                        print(f"Found UUID: {uuid}")
+                        
+                        # Now download with the UUID
+                        download_url = f'https://drive.usercontent.google.com/download?id={file_id}&export=download&authuser=0&confirm=t&uuid={uuid}'
+                        
+                        print("Downloading actual file...")
+                        result = subprocess.run([
+                            'wget', '--no-check-certificate', '-O', digit5_7z, download_url
+                        ], capture_output=True, text=True, timeout=600)
+                        
+                        if result.returncode != 0:
+                            print(f"wget failed: {result.stderr}")
+                            raise Exception("Download failed with wget")
+                        
+                        print("Digit5 dataset downloaded successfully.")
+                    else:
+                        print("Could not find UUID in confirmation page")
+                        raise Exception("Could not extract UUID from confirmation page")
+                else:
+                    print("Got file directly (no confirmation needed)")
+                    
+            except Exception as e:
+                print(f"Failed to download: {e}")
+                # Clean up any partial download
+                if os.path.exists(digit5_7z):
+                    os.remove(digit5_7z)
+                raise e
+        
+        # Extract the 7z file if it exists
+        if os.path.exists(digit5_7z):
+            print("Extracting Digit5 dataset (7z file)...")
+            try:
+                # Use 7z to extract the file
+                result = subprocess.run([
+                    '7z', 'x', digit5_7z, f'-o{root}', '-y'
+                ], capture_output=True, text=True, timeout=300)
+                
+                if result.returncode != 0:
+                    print(f"7z extraction failed: {result.stderr}")
+                    raise Exception("7z extraction failed")
+                    
+                print("Digit5 dataset extracted successfully.")
+                
+                # Move files from extracted subdirectory to root if needed
+                extracted_dirs = [d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d)) and d not in ['__MACOSX', '.', '..']]
+                for extracted_dir in extracted_dirs:
+                    extracted_path = os.path.join(root, extracted_dir)
+                    if os.path.exists(extracted_path):
+                        # Move all files from extracted directory to root
+                        for item in os.listdir(extracted_path):
+                            src = os.path.join(extracted_path, item)
+                            dst = os.path.join(root, item)
+                            if os.path.isfile(src) and not os.path.exists(dst):
+                                shutil.move(src, dst)
+                        # Remove empty directory if it's empty
+                        try:
+                            os.rmdir(extracted_path)
+                        except:
+                            pass
+                            
+                # Remove the 7z file to save space
+                os.remove(digit5_7z)
+                
+            except Exception as e:
+                print(f"7z extraction failed: {e}")
+                print("Make sure 7z is installed: sudo apt-get install p7zip-full")
+                raise e
+        
+        # Check if download was successful
+        missing_files = [f for f in required_files if not os.path.exists(os.path.join(root, f))]
+        
+        if missing_files:
+            print(f"\nSome dataset files are still missing after download: {missing_files}")
+            raise FileNotFoundError(f"Required dataset files are missing: {missing_files}")
+                
+    except Exception as e:
+        print(f"Download failed: {e}")
+        raise
 
 
 

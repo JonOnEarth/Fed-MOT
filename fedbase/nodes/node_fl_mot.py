@@ -215,6 +215,7 @@ class node():
                 labels = labels.to(self.device, dtype = torch.long)
                 for s, cluster in enumerate(cluster_vec):
                     cluster.eval()
+                    cluster.to(self.device)
                     out = cluster(inputs)
                     out = out.view(-1, num_classes)
                     loss = torch.nn.CrossEntropyLoss(reduction='none')(out, labels)
@@ -239,6 +240,7 @@ class node():
         self.loss = self.objective(out, labels)
         mse_loss = torch.nn.MSELoss(reduction='sum')
         for i, cluster in enumerate(cluster_vec):
+            cluster.to(self.device)
             l2 = None
             for (param_local, param_cluster) in zip(self.model.parameters(), cluster.parameters()):
                 if l2 is None:

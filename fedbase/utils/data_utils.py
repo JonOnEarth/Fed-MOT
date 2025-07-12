@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 import torch
 from torch.utils.data import DataLoader, Dataset, random_split, Subset, ChainDataset, ConcatDataset
 from fedbase.utils.tools import get_targets
-from torch._utils import _accumulate
+from itertools import accumulate as _accumulate
 from sklearn.model_selection import train_test_split
 
 

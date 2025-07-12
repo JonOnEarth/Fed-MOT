@@ -442,6 +442,7 @@ class server_class():
                 for key in next_weights.keys():
                     next_weights[key] += aggregation_weight * client_weights[key].cpu()
             cluster_vec[s].load_state_dict(state_dict=next_weights)
+            cluster_vec[s].to(self.device)
         return cluster_vec
 
     def generate_zero_weights(self):

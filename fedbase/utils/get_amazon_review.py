@@ -62,7 +62,35 @@ def generate_AmazonReview(client_group=1, method='iid',alpha=0.5):
     # Get AmazonReview data
     if not os.path.exists(root):
         os.makedirs(root)
-        os.system(f'wget https://drive.google.com/u/0/uc?id=1QbXFENNyqor1IlCpRRFtOluI2_hMEd1W&export=download -P {root}')
+        
+    # Download the Amazon Review dataset if it doesn't exist
+    amazon_file = os.path.join(root, 'amazon.npz')
+    if not os.path.exists(amazon_file):
+        zip_file = os.path.join(root, 'AmazonReview.zip')
+        if not os.path.exists(zip_file):
+            print("Downloading Amazon Review dataset...")
+            file_id = '1QbXFENNyqor1IlCpRRFtOluI2_hMEd1W'
+            # Use proper Google Drive download URL with confirmation
+            download_url = f'https://drive.usercontent.google.com/download?id={file_id}&confirm=t'
+            os.system(f'wget --no-check-certificate "{download_url}" -O "{zip_file}"')
+        
+        # Extract the zip file
+        if os.path.exists(zip_file):
+            print("Extracting Amazon Review dataset...")
+            os.system(f'unzip -o "{zip_file}" -d "{root}"')
+            # Move files from extracted subdirectory to root
+            extracted_dir = os.path.join(root, 'AmazonReview')
+            if os.path.exists(extracted_dir):
+                import shutil
+                # Move all files from extracted_dir to root
+                for item in os.listdir(extracted_dir):
+                    src = os.path.join(extracted_dir, item)
+                    dst = os.path.join(root, item)
+                    shutil.move(src, dst)
+                # Remove the empty extracted directory
+                os.rmdir(extracted_dir)
+            # Remove the zip file to save space
+            os.remove(zip_file)
 
     X, y = load_amazon(root)
 

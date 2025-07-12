@@ -3,7 +3,7 @@ from torchvision import datasets, transforms
 import numpy as np
 from torch.utils.data import DataLoader, Dataset, random_split, Subset, ChainDataset, ConcatDataset
 import torch
-from torch._utils import _accumulate
+from itertools import accumulate as _accumulate
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from fedbase.utils.tools import get_targets
