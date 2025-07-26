@@ -30,7 +30,7 @@ optimizer = partial(optim.SGD,lr=0.005, momentum=0.9)
 # device = torch.device('cuda')  # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # print(device)
-K = 2
+K = 4
 H = 2
 
 def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_method='weighted',warm_up=False,warm_up_rounds=2):
@@ -56,6 +56,8 @@ def main(seeds, dataset_splited, model, model_name, K=None,n_assign=None,cost_me
         fedamp.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, device = device)
     elif model_name == 'FedSoft':
         fedsoft.run(dataset_splited, batch_size, K, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, selection_size=15,num_classes=10,reg_lam=0.1,device = device)
+    elif model_name == 'FedEM':
+        fedem.run(dataset_splited, batch_size, num_nodes, model, nn.CrossEntropyLoss, optimizer, global_rounds, local_steps, num_learners=K, device=device)
 if __name__ == '__main__':
     dataset = 'cifar10' #'amazon' #'digit5'
     seeds = 1989 # 0,2020
@@ -105,7 +107,7 @@ if __name__ == '__main__':
     
     n_assign_list = [3,6]
     
-    model_name_list0 = ['FedSoft']#,] #,，BayesPFedAvg,FedSoft'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl',Fesem
+    model_name_list0 = ['FedEM' ]#,'FedSoft',,] #,，BayesPFedAvg,FedSoft'BayesFedAvg','Fesem',,,,,'GNN','FedAvg','FedAvg','Wecfl',Fesem
     model_name_list1 = ['GNN']
     model_name_list2 = ['JPDA','MHT'] #,'MHT'
     # cost_methods = ['weighted'] #,'average'

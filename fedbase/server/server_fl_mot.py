@@ -450,3 +450,22 @@ class server_class():
         for key, val in self.model.state_dict().items():
             self._zero_weights[key] = torch.zeros(size=val.shape, dtype=torch.float32)
         return copy.deepcopy(self._zero_weights)
+    
+    def fedem_acc(self, nodes, weight_list, num_learners):
+        """
+        Calculate and print global accuracy for FedEM
+        
+        Args:
+            nodes: List of client nodes
+            weight_list: Weights for aggregating client metrics
+            num_learners: Number of learners per client
+        """
+        global_test_metrics = [0] * 2  # [accuracy, f1_score]
+        
+        for i in range(len(weight_list)):
+            if nodes[i].test_metrics:  # Check if test metrics exist
+                for j in range(len(global_test_metrics)):
+                    global_test_metrics[j] += weight_list[i] * nodes[i].test_metrics[-1][j]
+        
+        print(f'GLOBAL Accuracy, Macro F1 is {100 * global_test_metrics[0]:.2f} %, {100 * global_test_metrics[1]:.2f} %')
+        self.test_metrics.append(global_test_metrics)

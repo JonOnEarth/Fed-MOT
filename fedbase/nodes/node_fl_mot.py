@@ -257,6 +257,155 @@ class node():
             return [ust * self.data_size for ust in self.importance_estimated]
         else:
             return self.importance_estimated
+    
+    # FedEM: Local training with multiple learners and EM algorithm
+    def fedem_local_training(self, local_steps, num_learners):
+        """
+        FedEM local training implementing the EM algorithm
+        
+        Args:
+            local_steps: Number of local training steps
+            num_learners: Number of learners per client
+        """
+        import torch.nn.functional as F
+        
+        if self.id == 0:
+            print(f"[Client {self.id}] Starting FedEM local training with {local_steps} steps, {num_learners} learners")
+            
+        for step in range(local_steps):
+            if self.id == 0:
+                print(f"[Client {self.id}] Local step {step}")
+                
+            for inputs, labels in self.train:
+                inputs = inputs.to(self.device)
+                labels = torch.flatten(labels).to(self.device, dtype=torch.long)
+                
+                if self.id == 0:
+                    print(f"  [Client {self.id}] Processing batch: {inputs.shape[0]} samples")
+                
+                # E-step: Compute assignment probabilities r_{i,j,m}
+                assignment_probs = self._compute_assignment_probabilities(inputs, labels, num_learners)
+                
+                # M-step: Update mixing coefficients and model parameters
+                self._update_mixing_coefficients(assignment_probs, num_learners)
+                self._update_learner_parameters(inputs, labels, assignment_probs, num_learners)
+                
+                break  # Process one batch per step
+    
+    def _compute_assignment_probabilities(self, inputs, labels, num_learners):
+        """
+        E-step: Compute assignment probabilities r_{i,j,m}
+        """
+        batch_size = inputs.size(0)
+        assignment_probs = torch.zeros(batch_size, num_learners, device=self.device)
+        
+        # Compute log probabilities for numerical stability
+        log_probs = torch.zeros(batch_size, num_learners, device=self.device)
+        
+        for m in range(num_learners):
+            self.learners[m].eval()
+            with torch.no_grad():
+                outputs = self.learners[m](inputs)
+                # Use negative cross-entropy as log probability
+                log_likelihood = -F.cross_entropy(outputs, labels, reduction='none')
+                log_probs[:, m] = torch.log(self.mixing_coeffs[m] + 1e-8) + log_likelihood
+        
+        # Apply temperature scaling to prevent extreme assignment probabilities
+        temperature = 2.0  # Higher temperature = more balanced assignments
+        log_probs = log_probs / temperature
+        
+        # Normalize using log-sum-exp trick for numerical stability
+        max_log_probs = torch.max(log_probs, dim=1, keepdim=True)[0]
+        normalized_probs = torch.exp(log_probs - max_log_probs)
+        assignment_probs = normalized_probs / (torch.sum(normalized_probs, dim=1, keepdim=True) + 1e-8)
+        
+        if self.id == 0:
+            if torch.isnan(assignment_probs).any():
+                print(f"    [Client {self.id}] DEBUG: NaN detected in assignment_probs")
+            # Debug assignment probabilities
+            print(f"    [Client {self.id}] DEBUG: Assignment probs mean: {assignment_probs.mean(dim=0)}")
+            print(f"    [Client {self.id}] DEBUG: Assignment probs range: [{assignment_probs.min():.6f}, {assignment_probs.max():.6f}]")
+        
+        return assignment_probs
+    
+    def _update_mixing_coefficients(self, assignment_probs, num_learners):
+        """
+        Update mixing coefficients π_{i,m}
+        """
+        batch_size = assignment_probs.size(0)
+        for m in range(num_learners):
+            self.mixing_coeffs[m] = torch.mean(assignment_probs[:, m])
+        
+        # Normalize to ensure sum equals 1
+        self.mixing_coeffs = self.mixing_coeffs / (torch.sum(self.mixing_coeffs) + 1e-8)
+        
+        if self.id == 0:
+            coeffs_str = [f'{c.item():.3f}' for c in self.mixing_coeffs]
+            print(f"    [Client {self.id}] DEBUG: Updated mixing_coeffs: [{', '.join(coeffs_str)}]")
+
+    def _update_learner_parameters(self, inputs, labels, assignment_probs, num_learners):
+        """
+        Update learner parameters θ_{i,m}
+        """
+        for m in range(num_learners):
+            self.learners[m].train()
+            self.learner_optimizers[m].zero_grad()
+            
+            outputs = self.learners[m](inputs)
+            
+            # Weighted loss using assignment probabilities
+            sample_losses = F.cross_entropy(outputs, labels, reduction='none')
+            
+            # Correct normalization: divide by sum of assignment probabilities, not batch size
+            weighted_sample_losses = assignment_probs[:, m] * sample_losses
+            total_assignment_weight = torch.sum(assignment_probs[:, m]) + 1e-8
+            weighted_loss = torch.sum(weighted_sample_losses) / total_assignment_weight
+            
+            if self.id == 0:
+                raw_loss = torch.mean(sample_losses)
+                old_weighted_loss = torch.mean(assignment_probs[:, m] * sample_losses)
+                print(f"    [Client {self.id}] DEBUG: Learner {m}, Raw Loss: {raw_loss.item():.4f}")
+                print(f"    [Client {self.id}] DEBUG: Learner {m}, Old Weighted Loss: {old_weighted_loss.item():.4f}, New Weighted Loss: {weighted_loss.item():.4f}")
+                print(f"    [Client {self.id}] DEBUG: Learner {m}, Assignment weight sum: {total_assignment_weight.item():.3f}, mean: {assignment_probs[:, m].mean():.6f}")
+            
+            if not torch.isnan(weighted_loss):
+                weighted_loss.backward()
+                self.learner_optimizers[m].step()
+    
+    def fedem_local_test(self, num_learners):
+        """
+        FedEM local testing using ensemble of learners
+        """
+        self.test_metrics = []
+        correct = 0
+        total = 0
+        
+        # Set all learners to eval mode
+        for m in range(num_learners):
+            self.learners[m].eval()
+        
+        with torch.no_grad():
+            for inputs, labels in self.test:
+                inputs = inputs.to(self.device)
+                labels = torch.flatten(labels).to(self.device, dtype=torch.long)
+                
+                # Ensemble prediction: weighted average of all learners
+                ensemble_outputs = torch.zeros(inputs.size(0), self.learners[0](inputs).size(1), device=self.device)
+                
+                for m in range(num_learners):
+                    outputs = self.learners[m](inputs)
+                    ensemble_outputs += self.mixing_coeffs[m] * F.softmax(outputs, dim=1)
+                
+                # Get predictions
+                _, predicted = torch.max(ensemble_outputs, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+        
+        accuracy = correct / total
+        # For simplicity, using accuracy as both accuracy and F1 score
+        self.test_metrics.append([accuracy, accuracy])
+        
+        print(f'Accuracy, Macro F1 of Device {self.id} on the {total} test cases: {100 * accuracy:.2f} %, {100 * accuracy:.2f} %')
 
     def local_train_acc(self, model):
         model.to(self.device)
